@@ -1,0 +1,357 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const packages = [
+  {
+    name: '@harnessgg/electron',
+    bin: 'harness-electron',
+    install: 'npm i -D @harnessgg/electron',
+    version: '0.1.0',
+    status: 'published',
+    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
+    tags: ['electron', 'cdp', 'playwright', 'debugging'],
+    github: 'https://github.com/harnessgg/electron',
+    npm: 'https://www.npmjs.com/package/@harnessgg/electron',
+    commands: ['connect', 'dom', 'click', 'type', 'screenshot', 'assert', 'evaluate', 'wait'],
+  },
+];
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const cmd = (t: string) => `${c('t-cmd', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const heroTerminalHtml = [
+  comment('# Your agent installs the tool'),
+  cmd('npm i -D @harnessgg/electron'),
+  nl,
+  comment('# Then runs it like any CLI'),
+  cmd('harness-electron connect --port 9222'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"target":"My Electron App"&#125;&#125;'),
+  nl,
+  cmd('harness-electron click --role button --name "Sign in"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"selector":"[role=button]"&#125;&#125;'),
+  nl,
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"actual":"/dashboard"&#125;&#125;'),
+].join('\n');
+
+const pkgExampleHtml = [
+  comment('# Connect to an Electron app (--inspect-brk or remote-debugging-port)'),
+  cmd('harness-electron connect --port 9222'),
+  nl,
+  comment('# Inspect the DOM'),
+  cmd('harness-electron dom --format summary'),
+  nl,
+  comment('# Interact'),
+  cmd('harness-electron type --css "input[name=email]" --value "user@example.com"'),
+  cmd('harness-electron click --role button --name "Sign in"'),
+  nl,
+  comment('# Assert and capture'),
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  cmd('harness-electron screenshot --path ./artifacts/post-login.png'),
+  nl,
+  comment('# All output is JSON — pipe it, parse it, react to it'),
+  cmd("harness-electron dom --format summary | jq '.data.elements'"),
+].join('\n');
+---
+
+<Layout>
+  <div class="swiss-theme">
+    <nav>
+      <div class="container nav-inner">
+        <a class="brand" href="/">harness.gg</a>
+        <div class="links">
+          <a href="#packages">Packages</a>
+          <a href="/llms.txt">llms.txt</a>
+          <a href="https://github.com/harnessgg">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <div class="container">
+          <div class="hero-grid">
+            <div class="hero-text">
+              <h1>Give AI agents hands.</h1>
+              <p class="lead">Open-source CLI packages for autonomous interaction. No servers. No setup. Just npm install.</p>
+              <div class="actions">
+                <a href="#packages" class="btn btn-black">Browse Packages</a>
+                <a href="/llms.txt" class="btn btn-outline">Read llms.txt</a>
+              </div>
+            </div>
+            <div class="hero-code">
+              <div class="code-window">
+                <pre set:html={heroTerminalHtml}></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="features">
+        <div class="container">
+          <div class="feature-grid">
+            <div class="feature">
+              <h2>01. No Setup</h2>
+              <p>Forget MCP servers and daemons. Harness works as a standard CLI tool that any agent can install and execute immediately.</p>
+            </div>
+            <div class="feature">
+              <h2>02. Interaction</h2>
+              <p>Click, type, scroll, and screenshot. Give your agents the ability to actually use the applications they are building or testing.</p>
+            </div>
+            <div class="feature">
+              <h2>03. JSON Output</h2>
+              <p>Designed for machines. Every command returns structured, parseable JSON data. No regex scraping required.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="packages" id="packages">
+        <div class="container">
+          <div class="section-header">
+            <h2>Packages</h2>
+            <div class="line"></div>
+          </div>
+
+          {packages.map(pkg => (
+            <div class="package-item">
+              <div class="pkg-meta">
+                <h3>{pkg.name}</h3>
+                <span class="version">{pkg.version}</span>
+              </div>
+              <div class="pkg-content">
+                <p>{pkg.description}</p>
+                <div class="install-block">
+                  <code>{pkg.install}</code>
+                </div>
+                <div class="code-preview">
+                  <pre set:html={pkgExampleHtml}></pre>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</Layout>
+
+<style>
+  /* Swiss Theme Overrides */
+  .swiss-theme {
+    --bg: #ffffff;
+    --text: #000000;
+    --text-light: #555555;
+    --accent: #0033cc; /* International Klein Blue */
+    --border: #e0e0e0;
+    
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  /* Nav */
+  nav {
+    padding: 40px 0;
+  }
+  .nav-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -0.05em;
+  }
+  .links { display: flex; gap: 30px; }
+  .links a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .links a:hover { text-decoration: underline; }
+
+  /* Hero */
+  .hero {
+    padding: 80px 0 120px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+  h1 {
+    font-size: 5rem;
+    line-height: 0.95;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 30px;
+  }
+  .lead {
+    font-size: 1.5rem;
+    line-height: 1.4;
+    color: var(--text-light);
+    margin-bottom: 40px;
+    max-width: 480px;
+  }
+  .actions { display: flex; gap: 20px; }
+  .btn {
+    padding: 16px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-black {
+    background: var(--text);
+    color: var(--bg);
+  }
+  .btn-black:hover { background: var(--accent); }
+  .btn-outline {
+    border: 2px solid var(--text);
+    color: var(--text);
+  }
+  .btn-outline:hover {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  .code-window {
+    background: #f5f5f5;
+    padding: 30px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .t-comment { color: #999; }
+  .t-cmd { color: var(--accent); font-weight: bold; }
+  .t-json { color: #555; }
+
+  /* Features */
+  .features {
+    padding: 100px 0;
+    background: #f9f9f9;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+  }
+  .feature h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--accent);
+  }
+  .feature p {
+    font-size: 1.1rem;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+
+  /* Packages */
+  .packages { padding: 120px 0; }
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+  .section-header h2 {
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .line {
+    flex: 1;
+    height: 2px;
+    background: var(--text);
+  }
+  
+  .package-item {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 60px;
+    margin-bottom: 80px;
+  }
+  .pkg-meta h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .version {
+    display: inline-block;
+    background: #eee;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+  .pkg-content p {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    margin-bottom: 30px;
+    max-width: 700px;
+  }
+  .install-block {
+    background: #000;
+    color: #fff;
+    padding: 20px;
+    font-family: monospace;
+    margin-bottom: 30px;
+    display: inline-block;
+  }
+  .code-preview {
+    background: #f5f5f5;
+    padding: 30px;
+    border-left: 4px solid var(--accent);
+  }
+  .code-preview pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .package-item { grid-template-columns: 1fr; gap: 20px; }
+    h1 { font-size: 3.5rem; }
+  }
+</style>
+
+<script>
+  // Copy-to-clipboard functionality
+  document.querySelectorAll('.install-block code').forEach(el => {
+    el.addEventListener('click', () => {
+      const text = el.textContent || '';
+      navigator.clipboard.writeText(text).then(() => {
+        // Visual feedback could go here, but for minimalist theme, maybe just a console log or subtle change
+        // Since I didn't add a specific button, I'll make the code block clickable
+        const original = el.style.color;
+        el.style.color = 'var(--accent)';
+        setTimeout(() => {
+          el.style.color = original;
+        }, 200);
+      });
+    });
+  });
+</script>

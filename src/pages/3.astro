@@ -1,0 +1,374 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const packages = [
+  {
+    name: '@harnessgg/electron',
+    bin: 'harness-electron',
+    install: 'npm i -D @harnessgg/electron',
+    version: '0.1.0',
+    status: 'published',
+    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
+    tags: ['electron', 'cdp', 'playwright', 'debugging'],
+    github: 'https://github.com/harnessgg/electron',
+    npm: 'https://www.npmjs.com/package/@harnessgg/electron',
+    commands: ['connect', 'dom', 'click', 'type', 'screenshot', 'assert', 'evaluate', 'wait'],
+  },
+];
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const cmd = (t: string) => `${c('t-cmd', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const heroTerminalHtml = [
+  comment('# Your agent installs the tool'),
+  cmd('npm i -D @harnessgg/electron'),
+  nl,
+  comment('# Then runs it like any CLI'),
+  cmd('harness-electron connect --port 9222'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"target":"My Electron App"&#125;&#125;'),
+  nl,
+  cmd('harness-electron click --role button --name "Sign in"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"selector":"[role=button]"&#125;&#125;'),
+  nl,
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"actual":"/dashboard"&#125;&#125;'),
+].join('\n');
+
+const pkgExampleHtml = [
+  comment('# Connect to an Electron app (--inspect-brk or remote-debugging-port)'),
+  cmd('harness-electron connect --port 9222'),
+  nl,
+  comment('# Inspect the DOM'),
+  cmd('harness-electron dom --format summary'),
+  nl,
+  comment('# Interact'),
+  cmd('harness-electron type --css "input[name=email]" --value "user@example.com"'),
+  cmd('harness-electron click --role button --name "Sign in"'),
+  nl,
+  comment('# Assert and capture'),
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  cmd('harness-electron screenshot --path ./artifacts/post-login.png'),
+  nl,
+  comment('# All output is JSON — pipe it, parse it, react to it'),
+  cmd("harness-electron dom --format summary | jq '.data.elements'"),
+].join('\n');
+---
+
+<Layout>
+  <div class="retro-theme">
+    <div class="scanline"></div>
+    
+    <nav>
+      <div class="container nav-inner">
+        <a class="brand" href="/">[ HARNESS.GG ]</a>
+        <div class="links">
+          <a href="#packages">PACKAGES</a>
+          <a href="/llms.txt">LLMS.TXT</a>
+          <a href="https://github.com/harnessgg">GITHUB</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <div class="retro-box">
+            <div class="box-header">
+              <span>SYSTEM_MESSAGE</span>
+              <span>v0.1.0</span>
+            </div>
+            <div class="box-content">
+              <h1>GIVE AI AGENTS HANDS_</h1>
+              <p class="pixel-text">
+                OPEN-SOURCE CLI PACKAGES DETECTED.<br>
+                ENABLES AUTONOMOUS INTERACTION WITH APPS.<br>
+                STATUS: READY TO INSTALL.
+              </p>
+              
+              <div class="hero-actions">
+                <a href="#packages" class="btn-retro">START_GAME</a>
+                <a href="/llms.txt" class="btn-retro btn-alt">READ_MANUAL</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="crt-monitor">
+            <pre set:html={heroTerminalHtml}></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="why">
+        <div class="container">
+          <h2 class="section-title"> > MISSION_OBJECTIVES</h2>
+          <div class="why-grid">
+            <div class="why-item">
+              <h3>[X] NO SETUP</h3>
+              <p>MCP SERVERS = OBSTACLE. HARNESS = SHORTCUT.</p>
+            </div>
+            <div class="why-item">
+              <h3>[X] INTERACTION</h3>
+              <p>CLICK. TYPE. ASSERT. WIN.</p>
+            </div>
+            <div class="why-item">
+              <h3>[X] JSON DATA</h3>
+              <p>STRUCTURED OUTPUT FOR MACHINE CONSUMPTION.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="packages" id="packages">
+        <div class="container">
+          <h2 class="section-title"> > INVENTORY</h2>
+
+          {packages.map(pkg => (
+            <div class="pkg-card">
+              <div class="pkg-header">
+                <h3>{pkg.name}</h3>
+                <span class="lvl">LVL {pkg.version}</span>
+              </div>
+              <div class="pkg-body">
+                <p>{pkg.description}</p>
+                <div class="install-box">
+                  <span class="prompt">></span> {pkg.install}
+                </div>
+                <div class="code-block">
+                  <pre set:html={pkgExampleHtml}></pre>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</Layout>
+
+<style>
+  /* Retro Theme Overrides */
+  .retro-theme {
+    --bg: #2b2b2b;
+    --screen-bg: #1a1a1a;
+    --primary: #ff9900; /* Amber */
+    --secondary: #ffcc00;
+    --text: #ff9900;
+    --dim: #995500;
+    --border: #ff9900;
+    
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace;
+    min-height: 100vh;
+    padding-bottom: 50px;
+    image-rendering: pixelated;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* Scanline Effect */
+  .scanline {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0),
+      rgba(255,255,255,0) 50%,
+      rgba(0,0,0,0.2) 50%,
+      rgba(0,0,0,0.2)
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Nav */
+  nav {
+    padding: 20px 0;
+    border-bottom: 4px double var(--border);
+    background: var(--screen-bg);
+    margin-bottom: 40px;
+  }
+  .nav-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    text-decoration: none;
+    text-shadow: 2px 2px 0 #000;
+  }
+  .links { display: flex; gap: 20px; }
+  .links a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .links a:hover {
+    background: var(--primary);
+    color: #000;
+  }
+
+  /* Hero */
+  .hero { margin-bottom: 60px; }
+  .retro-box {
+    border: 4px solid var(--border);
+    background: var(--screen-bg);
+    margin-bottom: 30px;
+    box-shadow: 8px 8px 0 #000;
+  }
+  .box-header {
+    background: var(--primary);
+    color: #000;
+    padding: 5px 10px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+  }
+  .box-content { padding: 30px; text-align: center; }
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    text-shadow: 4px 4px 0 #000;
+  }
+  .pixel-text {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+  }
+  
+  .hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  .btn-retro {
+    background: var(--primary);
+    color: #000;
+    padding: 15px 20px;
+    font-weight: bold;
+    text-decoration: none;
+    border: 4px solid #000;
+    box-shadow: 4px 4px 0 var(--dim);
+  }
+  .btn-retro:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--dim);
+  }
+  .btn-alt {
+    background: transparent;
+    border: 4px solid var(--primary);
+    color: var(--primary);
+    box-shadow: none;
+  }
+  .btn-alt:hover {
+    background: var(--dim);
+    color: var(--primary);
+  }
+
+  .crt-monitor {
+    background: #000;
+    border: 10px solid #444;
+    border-radius: 20px;
+    padding: 20px;
+    color: var(--primary);
+    font-family: monospace;
+    overflow-x: auto;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+  }
+  .t-comment { color: var(--dim); }
+  .t-cmd { color: #fff; }
+  .t-json { color: var(--secondary); }
+
+  /* Why */
+  .section-title {
+    border-bottom: 2px dashed var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 30px;
+    font-size: 1.5rem;
+  }
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+  .why-item {
+    border: 2px solid var(--dim);
+    padding: 15px;
+    background: var(--screen-bg);
+  }
+  .why-item h3 { margin-bottom: 10px; color: #fff; }
+
+  /* Packages */
+  .pkg-card {
+    border: 4px solid var(--border);
+    margin-bottom: 30px;
+    background: var(--screen-bg);
+  }
+  .pkg-header {
+    background: var(--dim);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pkg-header h3 { color: #000; margin: 0; }
+  .lvl { font-weight: bold; color: #000; }
+  .pkg-body { padding: 20px; }
+  .install-box {
+    background: #000;
+    border: 2px solid var(--border);
+    padding: 15px;
+    margin: 20px 0;
+    color: #fff;
+  }
+  .prompt { color: var(--primary); animation: blink 1s infinite; }
+  .code-block {
+    background: #000;
+    padding: 15px;
+    border: 1px solid var(--dim);
+    overflow-x: auto;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  @media (max-width: 768px) {
+    .why-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+
+<script>
+  // Copy-to-clipboard
+  document.querySelectorAll('.install-box').forEach(el => {
+    el.addEventListener('click', () => {
+      // Get text content but ignore the prompt span if possible, or just grab the text node
+      // Simple approach: just copy the whole text content and strip the prompt if needed
+      // Or better, since I know the structure:
+      const text = el.childNodes[2]?.textContent?.trim() || el.textContent?.replace('>', '').trim() || '';
+      
+      navigator.clipboard.writeText(text).then(() => {
+        const originalBg = el.style.backgroundColor;
+        el.style.backgroundColor = 'var(--dim)';
+        setTimeout(() => {
+          el.style.backgroundColor = originalBg;
+        }, 100);
+      });
+    });
+  });
+</script>

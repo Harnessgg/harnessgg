@@ -1,0 +1,481 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const packages = [
+  {
+    name: '@harnessgg/electron',
+    bin: 'harness-electron',
+    install: 'npm i -D @harnessgg/electron',
+    version: '0.1.0',
+    status: 'published',
+    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
+    tags: ['electron', 'cdp', 'playwright', 'debugging'],
+    github: 'https://github.com/harnessgg/electron',
+    npm: 'https://www.npmjs.com/package/@harnessgg/electron',
+    commands: ['connect', 'dom', 'click', 'type', 'screenshot', 'assert', 'evaluate', 'wait'],
+  },
+];
+
+const comingSoon = [
+  { name: '@harnessgg/browser', description: 'Harness any Chromium or Firefox browser tab.' },
+  { name: '@harnessgg/desktop', description: 'Control native desktop apps on macOS, Windows, and Linux.' },
+  { name: '@harnessgg/terminal', description: 'Interact with terminal emulators and shell sessions.' },
+];
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const cmd = (t: string) => `${c('t-cmd', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const heroTerminalHtml = [
+  comment('# Your agent installs the tool'),
+  cmd('npm i -D @harnessgg/electron'),
+  nl,
+  comment('# Then runs it like any CLI'),
+  cmd('harness-electron connect --port 9222'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"target":"My Electron App"&#125;&#125;'),
+  nl,
+  cmd('harness-electron click --role button --name "Sign in"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"selector":"[role=button]"&#125;&#125;'),
+  nl,
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"actual":"/dashboard"&#125;&#125;'),
+].join('\n');
+
+const pkgExampleHtml = [
+  comment('# Connect to an Electron app (--inspect-brk or remote-debugging-port)'),
+  cmd('harness-electron connect --port 9222'),
+  nl,
+  comment('# Inspect the DOM'),
+  cmd('harness-electron dom --format summary'),
+  nl,
+  comment('# Interact'),
+  cmd('harness-electron type --css "input[name=email]" --value "user@example.com"'),
+  cmd('harness-electron click --role button --name "Sign in"'),
+  nl,
+  comment('# Assert and capture'),
+  cmd('harness-electron assert --kind url --expected "/dashboard"'),
+  cmd('harness-electron screenshot --path ./artifacts/post-login.png'),
+  nl,
+  comment('# All output is JSON — pipe it, parse it, react to it'),
+  cmd("harness-electron dom --format summary | jq '.data.elements'"),
+].join('\n');
+
+const agentSnippetHtml = [
+  comment('# Option 1: Fetch the discovery index'),
+  cmd('curl https://harness.gg/llms.txt'),
+  nl,
+  comment('# Option 2: Fetch the package registry'),
+  cmd('curl https://harness.gg/packages.json'),
+  nl,
+  comment('# Option 3: npm search'),
+  cmd('npm search @harnessgg'),
+  nl,
+  comment('# Then install whatever you need'),
+  cmd('npm i -D @harnessgg/electron'),
+  cmd('harness-electron --help'),
+].join('\n');
+---
+
+<Layout>
+  <div class="cyberpunk-theme">
+    <!-- ── NAV ─────────────────────────────────────────────────── -->
+    <nav>
+      <div class="nav-inner">
+        <a class="wordmark" href="/">HARNESS<span>.GG</span></a>
+        <div class="nav-links">
+          <a href="#packages">PACKAGES</a>
+          <a href="#how-it-works">HOW IT WORKS</a>
+          <a href="/llms.txt">LLMS.TXT</a>
+          <a href="https://github.com/harnessgg" target="_blank" rel="noopener">GITHUB</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- ── HERO ──────────────────────────────────────────────── -->
+      <section class="hero">
+        <div class="grid-bg"></div>
+        <div class="container">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            SYSTEM ONLINE · v0.1.0
+          </div>
+
+          <h1>GIVE AI AGENTS<br /><em>HANDS</em>.</h1>
+
+          <p class="hero-sub">
+            Open-source CLI packages. Interact with real apps.<br>
+            <span class="glitch-text">NO MCPS. NO SERVERS. NO SETUP.</span>
+          </p>
+
+          <div class="hero-terminal">
+            <div class="terminal-bar">
+              <span class="terminal-title">>> AGENT_TASK_EXECUTING...</span>
+            </div>
+            <pre class="terminal-body" set:html={heroTerminalHtml}></pre>
+          </div>
+
+          <div class="hero-actions">
+            <a class="btn-primary" href="#packages">INITIATE SEQUENCE</a>
+            <a class="btn-ghost" href="/llms.txt">READ DATA STREAM</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── WHY ───────────────────────────────────────────────── -->
+      <section class="why" id="how-it-works">
+        <div class="container">
+          <h2 class="section-label">THE PROBLEM</h2>
+          <div class="why-grid">
+            <div class="why-card why-bad">
+              <div class="why-icon">ERROR</div>
+              <h3>MCP SETUP FAILURE</h3>
+              <p>Model Context Protocol servers require daemons and config files. Autonomous agents cannot execute.</p>
+            </div>
+            <div class="why-card why-bad">
+              <div class="why-icon">READ_ONLY</div>
+              <h3>READ-ONLY MODE</h3>
+              <p>Agents can read code but lack input privileges. Cannot click. Cannot verify state.</p>
+            </div>
+            <div class="why-card why-good">
+              <div class="why-icon">SUCCESS</div>
+              <h3>HARNESS CLI</h3>
+              <p>Standard shell execution. Install via npm. Structured JSON output. 100% Autonomous compatible.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── PACKAGES ──────────────────────────────────────────── -->
+      <section class="packages" id="packages">
+        <div class="container">
+          <h2 class="section-label">AVAILABLE MODULES</h2>
+
+          {packages.map(pkg => (
+            <article class="pkg-card">
+              <div class="pkg-header">
+                <div>
+                  <div class="pkg-name-row">
+                    <h3 class="pkg-name">{pkg.name}</h3>
+                    <span class="pkg-version">v{pkg.version}</span>
+                    <span class="pkg-status published">ACTIVE</span>
+                  </div>
+                  <p class="pkg-desc">{pkg.description}</p>
+                </div>
+                <div class="pkg-links">
+                  <a href={pkg.npm} target="_blank" rel="noopener">NPM</a>
+                  <a href={pkg.github} target="_blank" rel="noopener">GITHUB</a>
+                </div>
+              </div>
+
+              <div class="pkg-install">
+                <code>{pkg.install}</code>
+                <button class="copy-btn" data-copy={pkg.install} aria-label="Copy install command">COPY</button>
+              </div>
+
+              <div class="pkg-commands">
+                <span class="label">COMMANDS</span>
+                <div class="cmd-list">
+                  {pkg.commands.map(cmd => (
+                    <code class="cmd-chip">{cmd}</code>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pkg-example">
+                <pre set:html={pkgExampleHtml}></pre>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+</Layout>
+
+<script>
+  // Copy-to-clipboard for install commands
+  document.querySelectorAll('.copy-btn').forEach(el => {
+    const btn = /** @type {HTMLButtonElement} */ (el);
+    btn.addEventListener('click', () => {
+      const text = btn.dataset['copy'] || '';
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'COPIED';
+        setTimeout(() => {
+          btn.textContent = orig;
+        }, 1800);
+      });
+    });
+  });
+</script>
+
+<style>
+  /* Cyberpunk Theme Overrides */
+  .cyberpunk-theme {
+    --bg: #050505;
+    --surface: #0a0a0a;
+    --surface-1: #111;
+    --border: #333;
+    --text: #eee;
+    --text-2: #aaa;
+    
+    --neon-pink: #ff00ff;
+    --neon-cyan: #00ffff;
+    --neon-yellow: #ffff00;
+    
+    --primary: var(--neon-cyan);
+    --secondary: var(--neon-pink);
+    
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Global Layout */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Nav */
+  nav {
+    border-bottom: 2px solid var(--primary);
+    background: rgba(0,0,0,0.9);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .wordmark {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: var(--text);
+    text-shadow: 2px 2px 0px var(--secondary);
+  }
+  .wordmark span { color: var(--primary); }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a {
+    color: var(--text);
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+  }
+  .nav-links a:hover {
+    color: var(--primary);
+    text-shadow: 0 0 8px var(--primary);
+    text-decoration: none;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .grid-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    perspective: 500px;
+    transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(2);
+    opacity: 0.3;
+    z-index: 1;
+    pointer-events: none;
+  }
+  
+  h1 {
+    font-size: 4rem;
+    line-height: 0.9;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    text-shadow: 4px 4px 0px var(--secondary);
+  }
+  h1 em {
+    color: var(--primary);
+    font-style: italic;
+    text-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+  }
+  
+  .badge {
+    display: inline-block;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 10px var(--primary);
+  }
+  .badge-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--primary);
+    margin-right: 8px;
+    box-shadow: 0 0 5px var(--primary);
+  }
+
+  .hero-sub {
+    font-size: 1.2rem;
+    max-width: 600px;
+    margin-bottom: 40px;
+    border-left: 4px solid var(--secondary);
+    padding-left: 20px;
+  }
+  .glitch-text {
+    color: var(--secondary);
+    font-weight: bold;
+    text-shadow: 2px 0 var(--neon-yellow);
+  }
+
+  /* Terminal */
+  .hero-terminal {
+    border: 2px solid var(--text);
+    background: #000;
+    box-shadow: 10px 10px 0px var(--text-2);
+    margin-bottom: 40px;
+  }
+  .terminal-bar {
+    background: var(--text);
+    color: #000;
+    padding: 5px 10px;
+    font-weight: bold;
+  }
+  .terminal-body {
+    padding: 20px;
+    color: var(--primary);
+    text-shadow: 0 0 5px var(--primary);
+  }
+  .t-comment { color: var(--text-2); }
+  .t-cmd { color: var(--neon-yellow); }
+  .t-json { color: var(--neon-pink); }
+
+  /* Buttons */
+  .hero-actions { display: flex; gap: 20px; }
+  .btn-primary {
+    background: var(--primary);
+    color: #000;
+    padding: 15px 30px;
+    font-weight: 900;
+    text-transform: uppercase;
+    clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+    transition: transform 0.2s;
+  }
+  .btn-primary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 var(--secondary);
+  }
+  .btn-ghost {
+    border: 2px solid var(--text);
+    color: var(--text);
+    padding: 15px 30px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .btn-ghost:hover {
+    background: var(--text);
+    color: #000;
+  }
+
+  /* Why Section */
+  .why { padding: 80px 0; border-top: 1px solid var(--border); }
+  .section-label {
+    color: var(--secondary);
+    font-size: 1.5rem;
+    margin-bottom: 40px;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+  }
+  .why-card {
+    border: 1px solid var(--border);
+    padding: 30px;
+    background: rgba(255,255,255,0.05);
+  }
+  .why-card.why-bad { border-color: var(--secondary); }
+  .why-card.why-good { border-color: var(--primary); box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+  .why-icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    font-family: monospace;
+  }
+  .why-card.why-bad .why-icon { color: var(--secondary); }
+  .why-card.why-good .why-icon { color: var(--primary); }
+  
+  /* Packages */
+  .pkg-card {
+    border: 2px solid var(--border);
+    margin-bottom: 40px;
+    background: #000;
+  }
+  .pkg-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+  .pkg-name {
+    font-size: 1.5rem;
+    color: var(--primary);
+  }
+  .pkg-status {
+    background: var(--primary);
+    color: #000;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
+  .pkg-install {
+    background: #111;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .pkg-install code { color: var(--neon-yellow); }
+  .copy-btn {
+    background: var(--secondary);
+    border: none;
+    color: #fff;
+    font-weight: bold;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  .pkg-commands { padding: 15px; }
+  .cmd-chip {
+    border: 1px solid var(--text-2);
+    padding: 2px 8px;
+    margin-right: 5px;
+    color: var(--text-2);
+  }
+  .pkg-example {
+    background: #050505;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+  }
+</style>
