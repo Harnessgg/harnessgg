@@ -4,11 +4,18 @@
 // command specs, and response schemas.
 
 import type { APIRoute } from 'astro';
+import { getNpmVersion, getPypiVersion } from '@/lib/versions';
 
-const registry = {
+export const GET: APIRoute = async () => {
+  const [electronVersion, kdenliveVersion] = await Promise.all([
+    getNpmVersion('@harnessgg/electron', '0.1.0'),
+    getPypiVersion('harness-kdenlive', '0.3.0'),
+  ]);
+
+  const registry = {
   $schema: 'https://harness.gg/schemas/registry.json',
   version: '1.0',
-  updated: '2026-02-13',
+  updated: new Date().toISOString().slice(0, 10),
   description: 'Harness.gg package registry: CLI tools for AI agents',
   homepage: 'https://harness.gg',
   llmsTxt: 'https://harness.gg/llms.txt',
@@ -32,7 +39,7 @@ const registry = {
   packages: [
     {
       name: '@harnessgg/electron',
-      version: '0.1.0',
+      version: electronVersion,
       status: 'published',
       binary: 'harness-electron',
       install: {
@@ -147,27 +154,48 @@ const registry = {
       ],
       tags: ['electron', 'cdp', 'playwright', 'debugging', 'ui-automation'],
     },
+    {
+      name: 'harness-kdenlive',
+      version: kdenliveVersion,
+      status: 'published',
+      binary: 'harness-kdenlive',
+      install: {
+        pip: 'pip install harness-kdenlive',
+      },
+      description:
+        'CLI harness for AI agents to automate Kdenlive video editing. Create projects, edit timelines, apply effects and colour grades, and render. Structured JSON output via a local bridge.',
+      requirements: {
+        python: '>=3.10',
+        targetApp: 'Kdenlive with bridge running via harness-kdenlive bridge start',
+      },
+      links: {
+        pypi: 'https://pypi.org/project/harness-kdenlive/',
+        github: 'https://github.com/harnessgg/harness-kdenlive',
+        docs: 'https://github.com/harnessgg/harness-kdenlive/tree/main/docs/llm',
+      },
+      tags: ['kdenlive', 'video-editing', 'mlt', 'render', 'timeline'],
+    },
   ],
   comingSoon: [
     {
-      name: '@harnessgg/browser',
-      description: 'Harness Chromium or Firefox browser tabs.',
+      name: '@harnessgg/web',
+      description: 'Harness web browsers for AI agents. Automate tabs, navigation, DOM interaction, and screenshots.',
+      status: 'planned',
+      install: { npm: 'npm install -D @harnessgg/web' },
+    },
+    {
+      name: 'harnessgg-blender',
+      description: 'Harness the Blender 3D suite. Script scenes, objects, materials, and renders from the CLI.',
       status: 'planned',
     },
     {
-      name: '@harnessgg/desktop',
-      description: 'Harness native desktop apps on macOS, Windows, and Linux.',
-      status: 'planned',
-    },
-    {
-      name: '@harnessgg/terminal',
-      description: 'Harness terminal emulators and shell sessions.',
+      name: 'harnessgg-gimp',
+      description: 'Harness GIMP for image editing. Apply filters, adjustments, and exports programmatically.',
       status: 'planned',
     },
   ],
-};
+  };
 
-export const GET: APIRoute = () => {
   return new Response(JSON.stringify(registry, null, 2), {
     status: 200,
     headers: {

@@ -3,9 +3,10 @@ import Layout from '../layouts/Layout.astro';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CopyButton } from '@/components/CopyButton';
+import { getNpmVersion } from '@/lib/versions';
 
-const version = '0.1.0';
-const install = 'npm i -D @harnessgg/electron';
+const version = await getNpmVersion('@harnessgg/electron', '0.1.0');
+const install = 'npm install -D @harnessgg/electron';
 
 const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
 const comment = (t: string) => c('t-comment', t);
@@ -14,157 +15,176 @@ const json = (t: string) => c('t-json', t);
 const nl = '\n';
 
 const quickFlowHtml = [
-  comment('# 1. Start your Electron app with debugging enabled'),
+  comment('# 0. Start app with CDP enabled'),
   termCmd('electron . --remote-debugging-port=9222'),
+  nl,
+  comment('# 1. Discover contract'),
+  termCmd('harness-electron schema'),
   nl,
   comment('# 2. Connect'),
   termCmd('harness-electron connect --port 9222'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"target":"My App"}}'),
+  json('{"ok":true,"session":"default","data":{"target":"My App"}}'),
   nl,
-  comment('# 3. Inspect the DOM'),
-  termCmd('harness-electron dom --format summary --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"interactive":[{"role":"button","name":"Sign in"}]}}'),
+  comment('# 3. Inspect DOM'),
+  termCmd('harness-electron dom --format summary'),
+  json('{"ok":true,"session":"default","data":{"interactive":[{"role":"button","name":"Sign in"}]}}'),
   nl,
-  comment('# 4. Click a button'),
-  termCmd('harness-electron click --role button --name "Sign in" --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"selector":"[role=button]"}}'),
+  comment('# 4. Query a stable target'),
+  termCmd('harness-electron query --role button --name "Sign in"'),
+  json('{"ok":true,"session":"default","data":{"elements":[{"elementId":"e1","role":"button","name":"Sign in"}]}}'),
   nl,
-  comment('# 5. Type into an input'),
-  termCmd('harness-electron type --css "input[type=email]" --value "user@example.com" --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"typed":20}}'),
+  comment('# 5. Interact'),
+  termCmd('harness-electron type --css "input[type=email]" --value "user@example.com"'),
+  termCmd('harness-electron click --element-id e1'),
   nl,
-  comment('# 6. Assert'),
-  termCmd('harness-electron assert --kind url --expected "/dashboard" --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"actual":"/dashboard"}}'),
+  comment('# 6. Verify'),
+  termCmd('harness-electron assert --kind url --expected "/dashboard"'),
+  json('{"ok":true,"session":"default","data":{"actual":"/dashboard"}}'),
   nl,
   comment('# 7. Screenshot'),
-  termCmd('harness-electron screenshot --path ./debug.png --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"path":"./debug.png","bytes":48210}}'),
+  termCmd('harness-electron screenshot --path ./artifacts/dashboard.png'),
   nl,
-  comment('# 8. Disconnect'),
-  termCmd('harness-electron disconnect --session ses_a1b2'),
-  json('{"ok":true,"session":"ses_a1b2","data":{"closed":true}}'),
+  comment('# 8. Cleanup'),
+  termCmd('harness-electron disconnect'),
 ].join('\n');
 
 const commands = [
   {
     name: 'connect',
-    synopsis: 'harness-electron connect --port <n> [--host <h>]',
-    description: 'Connect to an Electron app via CDP. Returns a session ID.',
+    synopsis: 'harness-electron connect --port <n> [--host <h>] [--window-title <t>] [--url-contains <s>]',
+    description: 'Connect to an Electron app via CDP. Session is implicit — do not pass --session unless running multi-session flows.',
     flags: [
-      { flag: '--port', req: true,  desc: 'CDP port (e.g. 9222)' },
-      { flag: '--host', req: false, desc: 'Host (default: localhost)' },
+      { flag: '--port',          req: true,  desc: 'CDP port (e.g. 9222)' },
+      { flag: '--host',          req: false, desc: 'Host (default: localhost)' },
+      { flag: '--window-title',  req: false, desc: 'Filter targets by window title' },
+      { flag: '--url-contains',  req: false, desc: 'Filter targets by URL substring' },
     ],
   },
   {
     name: 'dom',
-    synopsis: 'harness-electron dom --session <id> [--format summary|tree|html]',
-    description: 'Inspect the DOM. Use summary first to discover interactive elements.',
+    synopsis: 'harness-electron dom [--format summary|tree|html] [--max-nodes <n>]',
+    description: 'Inspect the DOM. Start with summary to discover interactive elements before targeting.',
     flags: [
-      { flag: '--session', req: true,  desc: 'Session ID' },
-      { flag: '--format',  req: false, desc: 'summary | tree | html' },
-      { flag: '--css',     req: false, desc: 'Scope to element' },
+      { flag: '--format',    req: false, desc: 'summary | tree | html (default: summary)' },
+      { flag: '--max-nodes', req: false, desc: 'Cap node count in output' },
+    ],
+  },
+  {
+    name: 'query',
+    synopsis: 'harness-electron query <selector> [--limit <n>] [--visible-only]',
+    description: 'Resolve elements and return persistent elementIds for reuse in later commands. Prefer over inline selectors for stability.',
+    flags: [
+      { flag: '--css / --xpath / --text / --role / --testid', req: false, desc: 'Selector strategy (one required)' },
+      { flag: '--name',         req: false, desc: 'Accessible name (use with --role)' },
+      { flag: '--limit',        req: false, desc: 'Max results' },
+      { flag: '--visible-only', req: false, desc: 'Exclude hidden elements' },
     ],
   },
   {
     name: 'click',
-    synopsis: 'harness-electron click [--css|--role|--text|--testid] --session <id>',
-    description: 'Click an element. Prefer --role + --name for accessible targets.',
+    synopsis: 'harness-electron click <target> [--timeout <ms>]',
+    description: 'Click an element. Use --element-id from query for stable targeting, or a selector flag.',
     flags: [
-      { flag: '--session',                           req: true,  desc: 'Session ID' },
-      { flag: '--css / --xpath / --text / --role / --testid', req: false, desc: 'Selector (one required)' },
-      { flag: '--name',                              req: false, desc: 'Accessible name (use with --role)' },
+      { flag: '--element-id',                                 req: false, desc: 'ID returned by query (preferred)' },
+      { flag: '--css / --xpath / --text / --role / --testid', req: false, desc: 'Inline selector (one required if no --element-id)' },
+      { flag: '--name',                                       req: false, desc: 'Accessible name (use with --role)' },
+      { flag: '--index',                                      req: false, desc: 'Pick nth match (0-based, default 0)' },
+      { flag: '--timeout',                                    req: false, desc: 'Max wait ms' },
     ],
   },
   {
     name: 'type',
-    synopsis: 'harness-electron type [selector] --value <text> --session <id>',
-    description: 'Type text into an input. Clears existing content first.',
+    synopsis: 'harness-electron type <target> --value <text> [--clear] [--timeout <ms>]',
+    description: 'Type text into an input field.',
     flags: [
-      { flag: '--session',                      req: true,  desc: 'Session ID' },
-      { flag: '--value',                        req: true,  desc: 'Text to type' },
-      { flag: '--css / --role / --xpath / --testid', req: false, desc: 'Selector' },
+      { flag: '--value',                                      req: true,  desc: 'Text to type' },
+      { flag: '--element-id',                                 req: false, desc: 'ID returned by query' },
+      { flag: '--css / --xpath / --role / --testid',          req: false, desc: 'Inline selector' },
+      { flag: '--clear',                                      req: false, desc: 'Clear existing content first' },
+      { flag: '--timeout',                                    req: false, desc: 'Max wait ms' },
     ],
   },
   {
     name: 'wait',
-    synopsis: 'harness-electron wait --kind visible|url|text --expected <val> --session <id>',
-    description: 'Wait for a condition. Useful after navigation or async actions.',
+    synopsis: 'harness-electron wait --for visible|hidden|url|text [<target>] [--value <v>] [--timeout <ms>]',
+    description: 'Wait for a condition. Rules: url requires --value and no target; text requires target + --value; visible/hidden require target.',
     flags: [
-      { flag: '--session',  req: true,  desc: 'Session ID' },
-      { flag: '--kind',     req: true,  desc: 'visible | url | text' },
-      { flag: '--expected', req: true,  desc: 'Expected value' },
-      { flag: '--timeout',  req: false, desc: 'Max ms (default: 5000)' },
+      { flag: '--for',     req: true,  desc: 'visible | hidden | url | text' },
+      { flag: '--value',   req: false, desc: 'Expected value (required for url and text)' },
+      { flag: '--timeout', req: false, desc: 'Max wait ms' },
     ],
   },
   {
     name: 'screenshot',
-    synopsis: 'harness-electron screenshot --path <file> --session <id>',
-    description: 'Capture a screenshot of the viewport, full page, or element.',
+    synopsis: 'harness-electron screenshot --path <file> [--full-page] [<target>] [--timeout <ms>]',
+    description: 'Capture a screenshot. No target = viewport. With target = element. --full-page cannot be combined with a target.',
     flags: [
-      { flag: '--session', req: true,  desc: 'Session ID' },
-      { flag: '--path',    req: true,  desc: 'Output .png path' },
-      { flag: '--full',    req: false, desc: 'Full-page screenshot' },
-      { flag: '--css',     req: false, desc: 'Element screenshot' },
+      { flag: '--path',      req: true,  desc: 'Output .png path' },
+      { flag: '--full-page', req: false, desc: 'Full-page screenshot (no target allowed)' },
+      { flag: '--element-id / --css', req: false, desc: 'Element screenshot' },
+      { flag: '--timeout',   req: false, desc: 'Max wait ms' },
     ],
   },
   {
     name: 'assert',
-    synopsis: 'harness-electron assert --kind url|visible|text|title --expected <val> --session <id>',
-    description: 'Assert a condition. Returns ok:false + ASSERT_FAIL on failure.',
+    synopsis: 'harness-electron assert --kind exists|visible|text|url [<target>] [--expected <v>] [--timeout <ms>]',
+    description: 'Assert a condition. Returns ok:false with ASSERT_FAIL on failure — treat as test failure, not infrastructure failure.',
     flags: [
-      { flag: '--session',  req: true,  desc: 'Session ID' },
-      { flag: '--kind',     req: true,  desc: 'url | visible | text | title' },
-      { flag: '--expected', req: true,  desc: 'Expected value' },
-      { flag: '--css',      req: false, desc: 'Scope to element' },
+      { flag: '--kind',     req: true,  desc: 'exists | visible | text | url' },
+      { flag: '--expected', req: false, desc: 'Expected value (required for text and url)' },
+      { flag: '--element-id / --css / --xpath', req: false, desc: 'Target (required for exists, visible, text)' },
+      { flag: '--timeout',  req: false, desc: 'Max wait ms' },
     ],
   },
   {
     name: 'evaluate',
-    synopsis: 'harness-electron evaluate --script <js> --session <id>',
-    description: 'Execute JavaScript in the page context and return the result as JSON.',
+    synopsis: 'harness-electron evaluate --script <js>',
+    description: 'Execute a JavaScript expression in the page context and return the result as JSON.',
     flags: [
-      { flag: '--session', req: true, desc: 'Session ID' },
-      { flag: '--script',  req: true, desc: 'JavaScript expression' },
+      { flag: '--script', req: true, desc: 'JavaScript expression' },
     ],
   },
   {
     name: 'disconnect',
-    synopsis: 'harness-electron disconnect --session <id>',
-    description: 'Close the CDP session.',
-    flags: [
-      { flag: '--session', req: true, desc: 'Session ID' },
-    ],
+    synopsis: 'harness-electron disconnect',
+    description: 'Close the default CDP session.',
+    flags: [],
   },
   {
     name: 'sessions',
-    synopsis: 'harness-electron sessions [list|prune]',
-    description: 'List all sessions or prune stale ones.',
+    synopsis: 'harness-electron sessions list | prune',
+    description: 'List persisted sessions or prune stale ones.',
+    flags: [],
+  },
+  {
+    name: 'schema',
+    synopsis: 'harness-electron schema',
+    description: 'Emit machine-readable command and flag schema. Run this first for dynamic discovery.',
     flags: [],
   },
   {
     name: 'capabilities',
     synopsis: 'harness-electron capabilities',
-    description: 'Show what this harness can do. Good first command for an agent to run.',
+    description: 'Show a human-readable summary of what this harness can do.',
     flags: [],
   },
 ];
 
 const errorCodes = [
-  { code: 'INVALID_INPUT',    exit: 1, retryable: false, desc: 'Bad or missing arguments. Fix the command.' },
-  { code: 'CONNECT_FAILED',   exit: 1, retryable: true,  desc: 'Could not reach the CDP port. Check the app is running with --remote-debugging-port.' },
-  { code: 'TARGET_NOT_FOUND', exit: 1, retryable: true,  desc: 'No element matched the selector. Use dom --format summary.' },
-  { code: 'INVALID_SELECTOR', exit: 1, retryable: false, desc: 'Malformed selector string. Fix the syntax.' },
-  { code: 'ACTION_FAILED',    exit: 1, retryable: true,  desc: 'Action ran but something went wrong (e.g. element not interactable).' },
-  { code: 'TIMEOUT',          exit: 1, retryable: true,  desc: 'Condition did not occur within the timeout.' },
-  { code: 'ASSERT_FAIL',      exit: 1, retryable: false, desc: 'Assertion did not pass. Inspect actual value in error.message.' },
-  { code: 'INTERNAL_ERROR',   exit: 2, retryable: true,  desc: 'Unexpected error. Retry once; if it persists, file a bug.' },
+  { code: 'INVALID_INPUT',    exit: 10, retryable: false, desc: 'Bad or missing arguments. Fix the command before retrying.' },
+  { code: 'CONNECT_FAILED',   exit: 20, retryable: true,  desc: 'Could not reach CDP port. Verify the app is running with --remote-debugging-port.' },
+  { code: 'TARGET_NOT_FOUND', exit: 20, retryable: true,  desc: 'No element matched the selector. Run dom --format summary and retry with a different target.' },
+  { code: 'INVALID_SELECTOR', exit: 30, retryable: false, desc: 'Malformed selector. Run dom --format tree to rediscover structure.' },
+  { code: 'ACTION_FAILED',    exit: 30, retryable: true,  desc: 'Action executed but failed (e.g. element not interactable). Retry once.' },
+  { code: 'TIMEOUT',          exit: 40, retryable: true,  desc: 'Condition did not occur in time. Retry with a larger --timeout.' },
+  { code: 'ASSERT_FAIL',      exit: 50, retryable: false, desc: 'Assertion did not pass. Treat as test failure — inspect actual value in error.message.' },
+  { code: 'INTERNAL_ERROR',   exit: 70, retryable: true,  desc: 'Unexpected error. Retry once; if it persists, file a bug.' },
 ];
 ---
 
 <Layout
   title="@harnessgg/electron | Harness.gg"
-  description="CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol."
+  description="CLI harness for AI agents to automate Electron apps via Chrome DevTools Protocol. Connect, query, click, type, assert, screenshot — structured JSON output."
 >
 
   <!-- Header -->
@@ -183,7 +203,7 @@ const errorCodes = [
 
     <p class="tagline">
       CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol.
-      Connect, inspect DOM, click, type, screenshot, assert, and evaluate. All with structured JSON output.
+      Connect to any Electron app via CDP. Query elements, click, type, assert, screenshot, and evaluate JavaScript. Session is implicit — one JSON object per command.
     </p>
 
     <div class="install-row">
@@ -425,8 +445,9 @@ const errorCodes = [
   .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
   .term-body {
     padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.82rem; line-height: 1.85; overflow-x: auto;
+    font-size: 0.82rem; line-height: 1.85;
     background: #1e2830; color: #c4ccd4;
+    white-space: pre-wrap; word-break: break-all;
   }
   .t-comment { color: rgba(255,255,255,0.2); }
   .t-prompt  { color: #7a9aaa; user-select: none; }

@@ -1,0 +1,671 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CopyButton } from '@/components/CopyButton';
+import { getPypiVersion } from '@/lib/versions';
+
+const version = await getPypiVersion('harness-kdenlive', '0.3.0');
+const install = 'pip install harness-kdenlive';
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const termCmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const quickFlowHtml = [
+  comment('# 1. Start the bridge'),
+  termCmd('harness-kdenlive bridge start'),
+  nl,
+  comment('# 2. Verify stability'),
+  termCmd('harness-kdenlive bridge status'),
+  termCmd('harness-kdenlive bridge verify --iterations 25'),
+  nl,
+  comment('# 3. Create a project and import media'),
+  termCmd('harness-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite'),
+  termCmd('harness-kdenlive import-asset edit.kdenlive clip.mp4 --producer-id clip1'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"import-asset","data":{"producerId":"clip1"}}'),
+  nl,
+  comment('# 4. Build the timeline'),
+  termCmd('harness-kdenlive add-text edit.kdenlive "Opening Title" --duration-frames 75 --track-id playlist0 --position 0'),
+  termCmd('harness-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10'),
+  nl,
+  comment('# 5. Validate then render'),
+  termCmd('harness-kdenlive validate edit.kdenlive'),
+  termCmd('harness-kdenlive render-project edit.kdenlive output.mp4'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"render-project","data":{"jobId":"job_abc"}}'),
+  termCmd('harness-kdenlive render-status job_abc'),
+].join('\n');
+
+type Flag = { flag: string; req: boolean; desc: string };
+type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
+
+const bridgeCommands: Command[] = [
+  {
+    name: 'bridge start',
+    synopsis: 'harness-kdenlive bridge start [--host <ip>] [--port <n>]',
+    description: 'Start the local bridge server. Must be running before any editing commands.',
+    flags: [
+      { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
+      { flag: '--port', req: false, desc: 'Port (default: auto)' },
+    ],
+  },
+  {
+    name: 'bridge status',
+    synopsis: 'harness-kdenlive bridge status',
+    description: 'Check whether the bridge is reachable and healthy. Run before mutating commands.',
+    flags: [],
+  },
+  {
+    name: 'bridge verify',
+    synopsis: 'harness-kdenlive bridge verify [--iterations <n>] [--max-failures <n>]',
+    description: 'Run a stability check against the bridge. Recommended before long editing sessions.',
+    flags: [
+      { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 25)' },
+      { flag: '--max-failures', req: false, desc: 'Allowed failures before abort' },
+    ],
+  },
+  {
+    name: 'bridge stop',
+    synopsis: 'harness-kdenlive bridge stop',
+    description: 'Shut down the bridge server.',
+    flags: [],
+  },
+];
+
+const projectCommands: Command[] = [
+  {
+    name: 'create-project',
+    synopsis: 'harness-kdenlive create-project <output> [--title <s>] [--width <n>] [--height <n>] [--fps <f>] [--overwrite]',
+    description: 'Create a new Kdenlive project file.',
+    flags: [
+      { flag: '--title',    req: false, desc: 'Project title' },
+      { flag: '--width',    req: false, desc: 'Frame width px' },
+      { flag: '--height',   req: false, desc: 'Frame height px' },
+      { flag: '--fps',      req: false, desc: 'Frames per second' },
+      { flag: '--overwrite',req: false, desc: 'Replace existing file' },
+    ],
+  },
+  {
+    name: 'import-asset',
+    synopsis: 'harness-kdenlive import-asset <project> <media> [--producer-id <id>] [--dry-run]',
+    description: 'Import a media file into the project bin.',
+    flags: [
+      { flag: '--producer-id', req: false, desc: 'Stable ID to reference this clip in other commands' },
+      { flag: '--dry-run',     req: false, desc: 'Preview without writing' },
+    ],
+  },
+  {
+    name: 'inspect',
+    synopsis: 'harness-kdenlive inspect <project>',
+    description: 'Return a structured summary of the project — tracks, clips, duration.',
+    flags: [],
+  },
+  {
+    name: 'validate',
+    synopsis: 'harness-kdenlive validate <project> [--check-files]',
+    description: 'Validate project structure. Run before renders and after destructive edits.',
+    flags: [
+      { flag: '--check-files / --no-check-files', req: false, desc: 'Verify referenced media files exist (default: on)' },
+    ],
+  },
+  {
+    name: 'snapshot',
+    synopsis: 'harness-kdenlive snapshot <project> <description>',
+    description: 'Save a named checkpoint. Use before risky edits; restore with undo.',
+    flags: [],
+  },
+  {
+    name: 'undo / redo',
+    synopsis: 'harness-kdenlive undo <project> [--snapshot-id <id>]\nharness-kdenlive redo <project>',
+    description: 'Undo the last edit or redo it. Pass --snapshot-id to jump to a specific checkpoint.',
+    flags: [
+      { flag: '--snapshot-id', req: false, desc: 'Target snapshot (undo only)' },
+    ],
+  },
+];
+
+const timelineCommands: Command[] = [
+  {
+    name: 'add-clip',
+    synopsis: 'harness-kdenlive add-clip <project> <clip_id> <track_id> <position> [--in-point <n>] [--out-point <n>] [--dry-run]',
+    description: 'Place a clip on a track at the given frame position.',
+    flags: [
+      { flag: '--in-point / --out-point', req: false, desc: 'Trim the clip source range' },
+      { flag: '--dry-run', req: false, desc: 'Preview without writing' },
+    ],
+  },
+  {
+    name: 'move-clip',
+    synopsis: 'harness-kdenlive move-clip <project> <clip_ref> <track_id> <position> [--dry-run]',
+    description: 'Move a clip to a new track or position.',
+    flags: [
+      { flag: '--dry-run', req: false, desc: 'Preview without writing' },
+    ],
+  },
+  {
+    name: 'trim-clip',
+    synopsis: 'harness-kdenlive trim-clip <project> <clip_ref> [--in-point <n>] [--out-point <n>]',
+    description: 'Adjust a clip\'s in/out points.',
+    flags: [
+      { flag: '--in-point',  req: false, desc: 'New in-point frame' },
+      { flag: '--out-point', req: false, desc: 'New out-point frame' },
+    ],
+  },
+  {
+    name: 'split-clip',
+    synopsis: 'harness-kdenlive split-clip <project> <clip_ref> <position>',
+    description: 'Split a clip at the given frame, producing two clips.',
+    flags: [],
+  },
+  {
+    name: 'ripple-delete',
+    synopsis: 'harness-kdenlive ripple-delete <project> <clip_ref>',
+    description: 'Remove a clip and close the gap by shifting downstream clips.',
+    flags: [],
+  },
+  {
+    name: 'stitch-clips',
+    synopsis: 'harness-kdenlive stitch-clips <project> <track_id> <clip_id...> [--position <n>] [--gap <n>]',
+    description: 'Place a sequence of clips end-to-end on a track.',
+    flags: [
+      { flag: '--position', req: false, desc: 'Start frame (default: 0)' },
+      { flag: '--gap',      req: false, desc: 'Frames between clips' },
+    ],
+  },
+  {
+    name: 'add-text',
+    synopsis: 'harness-kdenlive add-text <project> <text> [--duration-frames <n>] [--track-id <id>] [--position <n>] [--font <s>] [--size <n>] [--color <hex>]',
+    description: 'Insert a text title clip.',
+    flags: [
+      { flag: '--duration-frames', req: false, desc: 'Length in frames' },
+      { flag: '--track-id',        req: false, desc: 'Target track' },
+      { flag: '--position',        req: false, desc: 'Start frame' },
+      { flag: '--font / --size / --color', req: false, desc: 'Typography overrides' },
+    ],
+  },
+  {
+    name: 'add-track',
+    synopsis: 'harness-kdenlive add-track <project> [--track-type video|audio] [--name <s>] [--index <n>]',
+    description: 'Add a new video or audio track.',
+    flags: [
+      { flag: '--track-type', req: false, desc: 'video | audio' },
+      { flag: '--name',       req: false, desc: 'Track label' },
+      { flag: '--index',      req: false, desc: 'Insert position' },
+    ],
+  },
+  {
+    name: 'apply-effect',
+    synopsis: 'harness-kdenlive apply-effect <project> <clip_ref> <service> [--properties-json <json>]',
+    description: 'Apply an MLT effect service to a clip.',
+    flags: [
+      { flag: '--effect-id',       req: false, desc: 'Explicit ID for later reference' },
+      { flag: '--properties-json', req: false, desc: 'Initial effect properties as JSON' },
+    ],
+  },
+  {
+    name: 'apply-transition',
+    synopsis: 'harness-kdenlive apply-transition <project> [--in-frame <n>] [--out-frame <n>] [--service <s>]',
+    description: 'Add a transition between two clips.',
+    flags: [
+      { flag: '--in-frame / --out-frame', req: false, desc: 'Transition range' },
+      { flag: '--service',                req: false, desc: 'MLT transition service name' },
+    ],
+  },
+  {
+    name: 'grade-clip',
+    synopsis: 'harness-kdenlive grade-clip <project> <clip_ref> [--lift <f>] [--gamma <f>] [--gain <f>] [--saturation <f>] [--lut-path <path>]',
+    description: 'Apply a colour grade to a clip.',
+    flags: [
+      { flag: '--lift / --gamma / --gain / --saturation', req: false, desc: 'Grade parameters (-1.0 to 1.0)' },
+      { flag: '--lut-path', req: false, desc: 'Path to a .cube LUT file' },
+    ],
+  },
+  {
+    name: 'duck-audio',
+    synopsis: 'harness-kdenlive duck-audio <project> <track_id> [--duck-gain <f>]',
+    description: 'Apply audio ducking to a track.',
+    flags: [
+      { flag: '--duck-gain', req: false, desc: 'Gain reduction factor (default: 0.2)' },
+    ],
+  },
+];
+
+const renderCommands: Command[] = [
+  {
+    name: 'render-project',
+    synopsis: 'harness-kdenlive render-project <project.kdenlive> <output.mp4> [--start-seconds <f>] [--duration-seconds <f>] [--preset-name h264|hevc|prores]',
+    description: 'Render the full project or a zone to a video file. Returns a job ID — poll render-status for progress.',
+    flags: [
+      { flag: '--start-seconds / --duration-seconds', req: false, desc: 'Render a subrange' },
+      { flag: '--zone-in / --zone-out',               req: false, desc: 'Render zone in frames' },
+      { flag: '--preset-name', req: false, desc: 'h264 | hevc | prores (default: h264)' },
+    ],
+  },
+  {
+    name: 'render-clip',
+    synopsis: 'harness-kdenlive render-clip <source.mp4> <output.mp4> <duration_seconds> [--start-seconds <f>] [--preset-name h264|hevc|prores]',
+    description: 'Render a standalone clip segment without a project file.',
+    flags: [
+      { flag: '--start-seconds', req: false, desc: 'Clip start offset' },
+      { flag: '--preset-name',   req: false, desc: 'h264 | hevc | prores' },
+    ],
+  },
+  {
+    name: 'render-status',
+    synopsis: 'harness-kdenlive render-status <job_id>',
+    description: 'Poll the status and progress of a render job.',
+    flags: [],
+  },
+];
+
+const errorCodes = [
+  { code: 'BRIDGE_UNAVAILABLE', exit: 5,  retryable: true,  desc: 'Bridge not reachable. Run bridge start; retry with backoff 0.5s, 1s, 2s (max 3 retries).' },
+  { code: 'INVALID_INPUT',      exit: 4,  retryable: false, desc: 'Bad or missing arguments. Fix the command before retrying.' },
+  { code: 'VALIDATION_FAILED',  exit: 3,  retryable: false, desc: 'Project structure is invalid. Run validate and fix issues first.' },
+  { code: 'FILE_NOT_FOUND',     exit: 2,  retryable: false, desc: 'Referenced file does not exist. Check paths.' },
+  { code: 'INTERNAL_ERROR',     exit: 1,  retryable: true,  desc: 'Unexpected error. Retry once; if it persists, file a bug.' },
+];
+---
+
+<Layout
+  title="harness-kdenlive | Harness.gg"
+  description="CLI harness for AI agents to edit Kdenlive projects. Create timelines, add clips, apply effects, and render — structured JSON output via a local bridge."
+>
+
+  <!-- Header -->
+  <section class="pt-10 pb-10 wrap">
+    <p class="breadcrumb">
+      <a href="/">harness.gg</a>
+      <span>/</span>
+      kdenlive
+    </p>
+
+    <div class="title-row">
+      <h1>harness-kdenlive</h1>
+      <Badge className="badge-live">Published</Badge>
+      <Badge variant="outline" className="badge-ver">v{version}</Badge>
+    </div>
+
+    <p class="tagline">
+      CLI harness for AI agents to automate Kdenlive video editing.
+      Create projects, edit timelines, apply effects and colour grades, and render — all with structured JSON output via a local bridge.
+    </p>
+
+    <div class="install-row">
+      <code>{install}</code>
+      <CopyButton client:load text={install} />
+    </div>
+
+    <div class="ext-links">
+      <a href="https://pypi.org/project/harness-kdenlive/" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
+      </a>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Prerequisite -->
+  <section class="wrap sec">
+    <h2>Prerequisite</h2>
+    <p class="sec-intro">Kdenlive must be installed. The harness uses a local bridge process to communicate with it. Python 3.10+ required.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">terminal</span>
+      </div>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-kdenlive bridge start`}></pre>
+    </div>
+    <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> — backoff 0.5s, 1s, 2s.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Quick flow -->
+  <section class="wrap sec">
+    <h2>Quick flow</h2>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">full agent session</span>
+      </div>
+      <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Bridge commands -->
+  <section class="wrap sec" id="bridge">
+    <h2>Bridge commands</h2>
+    <p class="sec-intro">The bridge must be running before any editing or render call. It binds to <code class="inline-code">127.0.0.1</code> only.</p>
+    <div class="cmd-list">
+      {bridgeCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Project commands -->
+  <section class="wrap sec" id="project">
+    <h2>Project commands</h2>
+    <div class="cmd-list">
+      {projectCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Timeline commands -->
+  <section class="wrap sec" id="timeline">
+    <h2>Timeline &amp; editing commands</h2>
+    <div class="cmd-list">
+      {timelineCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Render commands -->
+  <section class="wrap sec" id="render">
+    <h2>Render commands</h2>
+    <p class="sec-intro">Render calls are long-running. Timeout is 600s. Poll <code class="inline-code">render-status</code> until the job completes.</p>
+    <div class="cmd-list">
+      {renderCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Response shape -->
+  <section class="wrap sec">
+    <h2>Response shape</h2>
+    <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
+
+    <div class="shape-grid">
+      <div>
+        <p class="shape-label">Success</p>
+        <pre class="code-block">{`{
+  "ok": true,
+  "protocolVersion": "1.0",
+  "command": "add-clip",
+  "data": { "clipRef": "c3" }
+}`}</pre>
+      </div>
+      <div>
+        <p class="shape-label">Error</p>
+        <pre class="code-block">{`{
+  "ok": false,
+  "protocolVersion": "1.0",
+  "command": "add-clip",
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "Track 'playlist99' not found",
+    "retryable": false
+  }
+}`}</pre>
+      </div>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Error codes -->
+  <section class="wrap sec">
+    <h2>Error codes</h2>
+    <table class="flag-table">
+      <thead><tr><th>Code</th><th>Exit</th><th>Retryable</th><th>Action</th></tr></thead>
+      <tbody>
+        {errorCodes.map(e => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td class="mono-cell">{e.exit}</td>
+            <td class={e.retryable ? 'req-yes' : 'req-no'}>{e.retryable ? 'yes' : 'no'}</td>
+            <td>{e.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Submit feedback -->
+  <section class="wrap sec">
+    <h2>Submit feedback</h2>
+    <p class="sec-intro">
+      Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
+      Issues land on <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">harnessgg/Harness-kdenlive</a>.
+    </p>
+
+    <table class="flag-table" style="margin-bottom: 1.5rem">
+      <thead><tr><th>Field</th><th>Required</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="req-yes">yes</td><td class="mono-cell">"bug" | "feature" | "question"</td></tr>
+        <tr><td><code>package</code></td><td class="req-yes">yes</td><td class="mono-cell">"kdenlive"</td></tr>
+        <tr><td><code>title</code></td><td class="req-yes">yes</td><td>Short summary</td></tr>
+        <tr><td><code>body</code></td><td class="req-yes">yes</td><td>Full description</td></tr>
+        <tr><td><code>context</code></td><td class="req-no">no</td><td>Bridge version, OS, project details…</td></tr>
+      </tbody>
+    </table>
+
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">file a bug report</span>
+      </div>
+      <pre class="term-body" set:html={`<span class="t-prompt">$</span> curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"kdenlive","title":"bridge fails on start","body":"Steps..."}'`}></pre>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* Fonts */
+  h1, h2  { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  h2      { font-family: 'Source Serif 4', Georgia, serif; }
+  code, pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  /* Layout */
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+  .sec  { padding: 40px 0; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 0.82rem; color: var(--muted-foreground); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb span { margin: 0 6px; opacity: 0.4; }
+
+  /* Title row */
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 500; color: var(--foreground); }
+  .badge-live { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); border: none; font-size: 0.7rem; }
+  .badge-ver  { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted-foreground); }
+
+  /* Tagline */
+  .tagline { font-size: 1rem; color: var(--muted-foreground); max-width: 580px; line-height: 1.75; margin-bottom: 20px; }
+
+  /* Install row */
+  .install-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    background: var(--secondary); border: 2px solid #5a7a8a; border-radius: 10px;
+    max-width: 440px; margin-bottom: 16px;
+  }
+  .install-row code { font-size: 0.88rem; color: var(--foreground); }
+
+  /* External links */
+  .ext-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ext-badge { font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+  .ext-badge:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Section headings */
+  h2 { font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+  .sec-intro { font-size: 0.92rem; color: var(--muted-foreground); margin-bottom: 20px; line-height: 1.7; }
+  .sec-intro a { color: var(--primary); }
+  .note { font-size: 0.82rem; color: var(--muted-foreground); margin-top: 12px; }
+
+  /* Terminal blocks */
+  .term-block { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(30,42,52,0.12); border: 2px solid #5a7a8a; }
+  .term-bar {
+    display: flex; align-items: center; gap: 6px; padding: 10px 16px;
+    background: #283440; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #7a9aaa; opacity: 0.5; }
+  .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
+  .term-body {
+    padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; line-height: 1.85;
+    background: #1e2830; color: #c4ccd4;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .t-comment { color: rgba(255,255,255,0.2); }
+  .t-prompt  { color: #7a9aaa; user-select: none; }
+  .t-json    { color: rgba(255,255,255,0.3); }
+
+  /* Command cards */
+  .cmd-list  { display: flex; flex-direction: column; gap: 16px; }
+  .cmd-card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .cmd-head  { margin-bottom: 10px; }
+  .cmd-name  { font-size: 0.95rem; font-weight: 500; color: var(--primary); }
+  .cmd-synopsis {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--muted-foreground);
+    background: var(--secondary); padding: 9px 14px; border-radius: 8px; border: 2px solid #5a7a8a;
+    margin-bottom: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .cmd-desc { font-size: 0.87rem; color: var(--muted-foreground); margin-bottom: 14px; line-height: 1.65; }
+
+  /* Tables */
+  .flag-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .flag-table th {
+    text-align: left; padding: 7px 12px;
+    font-size: 0.73rem; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--muted-foreground); border-bottom: 1px solid var(--border);
+  }
+  .flag-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground); vertical-align: top; line-height: 1.5;
+  }
+  .flag-table td:first-child code { color: var(--foreground); font-size: 0.8rem; }
+  .req-yes { color: var(--primary) !important; font-size: 0.8rem; font-weight: 500; }
+  .req-no  { color: var(--muted-foreground) !important; font-size: 0.8rem; }
+  .mono-cell { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+
+  /* Response shape */
+  .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .shape-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .code-block {
+    background: #1e2830; color: #c4ccd4; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; padding: 18px 20px; border-radius: 12px; overflow-x: auto; line-height: 1.7;
+    border: 2px solid #5a7a8a;
+  }
+  .inline-code { background: var(--secondary); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+
+  @media (max-width: 600px) {
+    .shape-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.2rem; }
+  }
+</style>

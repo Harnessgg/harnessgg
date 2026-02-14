@@ -2,19 +2,47 @@
 import Layout from '../layouts/Layout.astro';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { InstallCycler } from '@/components/InstallCycler';
+import { getNpmVersion, getPypiVersion } from '@/lib/versions';
+
+const [electronVersion, kdenliveVersion] = await Promise.all([
+  getNpmVersion('@harnessgg/electron', '0.1.0'),
+  getPypiVersion('harness-kdenlive', '0.3.0'),
+]);
 
 const packages = [
   {
     name: '@harnessgg/electron',
-    version: '0.1.0',
+    version: electronVersion,
     description: 'Interact with any Electron app via Chrome DevTools Protocol. Click, type, screenshot, assert. Structured JSON output.',
     href: '/electron',
     status: 'published',
   },
   {
-    name: '@harnessgg/kdenlive',
+    name: 'harness-kdenlive',
+    version: kdenliveVersion,
+    description: 'Harness the Kdenlive video editor. Create projects, edit timelines, apply effects, and render. Structured JSON output.',
+    href: '/kdenlive',
+    status: 'published',
+  },
+  {
+    name: '@harnessgg/web',
     version: null,
-    description: 'Harness the Kdenlive video editor. Automate timelines, cuts, and exports from the CLI.',
+    description: 'Harness web browsers for AI agents. Automate tabs, navigation, DOM interaction, and screenshots via a CLI with structured JSON output.',
+    href: null,
+    status: 'soon',
+  },
+  {
+    name: 'harnessgg-blender',
+    version: null,
+    description: 'Harness the Blender 3D suite. Script scenes, objects, materials, and renders from the CLI with structured JSON output.',
+    href: null,
+    status: 'soon',
+  },
+  {
+    name: 'harnessgg-gimp',
+    version: null,
+    description: 'Harness GIMP for image editing. Apply filters, adjustments, and exports programmatically with structured JSON output.',
     href: null,
     status: 'soon',
   },
@@ -36,7 +64,7 @@ const packages = [
     </p>
 
     <div class="hero-actions">
-      <a href="https://github.com/Harnessgg" class="btn-primary">View Github &rarr;</a>
+      <InstallCycler client:load />
       <span class="hero-meta">Open source &middot; MIT</span>
     </div>
   </section>
@@ -127,26 +155,6 @@ const packages = [
     align-items: center;
     gap: 1.5rem;
     flex-wrap: wrap;
-  }
-
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.6rem 1.25rem;
-    background: var(--primary);
-    color: #fff;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 500;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: opacity 0.15s;
-  }
-
-  .btn-primary:hover {
-    opacity: 0.88;
-    text-decoration: none;
   }
 
   .hero-meta {
