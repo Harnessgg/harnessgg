@@ -8,7 +8,7 @@ const packages = [
     install: 'npm i -D @harnessgg/electron',
     version: '0.1.0',
     status: 'published',
-    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
+    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert. All from the CLI with structured JSON output.',
     tags: ['electron', 'cdp', 'playwright', 'debugging'],
     github: 'https://github.com/harnessgg/electron',
     npm: 'https://www.npmjs.com/package/@harnessgg/electron',
@@ -52,7 +52,7 @@ const pkgExampleHtml = [
   cmd('harness-electron assert --kind url --expected "/dashboard"'),
   cmd('harness-electron screenshot --path ./artifacts/post-login.png'),
   nl,
-  comment('# All output is JSON — pipe it, parse it, react to it'),
+  comment('# All output is JSON. Pipe it, parse it, react to it'),
   cmd("harness-electron dom --format summary | jq '.data.elements'"),
 ].join('\n');
 ---
@@ -94,7 +94,7 @@ const pkgExampleHtml = [
               <div class="dots">
                 <span></span><span></span><span></span>
               </div>
-              <div class="title">terminal — zsh</div>
+              <div class="title">terminal (zsh)</div>
             </div>
             <pre class="terminal-body" set:html={heroTerminalHtml}></pre>
           </div>

@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Ocean Slate custom tokens */
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --color-term-bg: var(--term-bg);
+  --color-term-bar: var(--term-bar);
+  --color-term-prompt: var(--term-prompt);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Ocean Slate */
+  --background:         oklch(0.962 0.006 241);  /* #f2f4f6 */
+  --foreground:         oklch(0.185 0.025 241);  /* #1e2a34 */
+  --card:               oklch(0.980 0.004 241);  /* #f8f9fb */
+  --card-foreground:    oklch(0.185 0.025 241);
+  --popover:            oklch(0.980 0.004 241);
+  --popover-foreground: oklch(0.185 0.025 241);
+  --primary:            oklch(0.513 0.048 231);  /* #5a7a8a */
+  --primary-foreground: oklch(1 0 0);
+  --secondary:          oklch(0.929 0.010 241);  /* #e6eaee */
+  --secondary-foreground: oklch(0.185 0.025 241);
+  --muted:              oklch(0.929 0.010 241);
+  --muted-foreground:   oklch(0.447 0.022 241);  /* #5a6a78 */
+  --accent:             oklch(0.929 0.010 241);
+  --accent-foreground:  oklch(0.185 0.025 241);
+  --destructive:        oklch(0.577 0.245 27.3);
+  --border:             oklch(0.880 0.012 241);
+  --input:              oklch(0.880 0.012 241);
+  --ring:               oklch(0.513 0.048 231);
+
+  /* Terminal colours */
+  --term-bg:     #1e2830;
+  --term-bar:    #283440;
+  --term-prompt: #7a9aaa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: oklch(0.513 0.048 231 / 0.15);
+  }
+}

@@ -8,7 +8,7 @@ const packages = [
     install: 'npm i -D @harnessgg/electron',
     version: '0.1.0',
     status: 'published',
-    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
+    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert. All from the CLI with structured JSON output.',
     tags: ['electron', 'cdp', 'playwright', 'debugging'],
     github: 'https://github.com/harnessgg/electron',
     npm: 'https://www.npmjs.com/package/@harnessgg/electron',
@@ -58,7 +58,7 @@ const pkgExampleHtml = [
   cmd('harness-electron assert --kind url --expected "/dashboard"'),
   cmd('harness-electron screenshot --path ./artifacts/post-login.png'),
   nl,
-  comment('# All output is JSON — pipe it, parse it, react to it'),
+  comment('# All output is JSON. Pipe it, parse it, react to it'),
   cmd("harness-electron dom --format summary | jq '.data.elements'"),
 ].join('\n');
 
@@ -80,7 +80,7 @@ const agentSnippetHtml = [
 
 <Layout>
   <div class="cyberpunk-theme">
-    <!-- ── NAV ─────────────────────────────────────────────────── -->
+    <!-- NAV -->
     <nav>
       <div class="nav-inner">
         <a class="wordmark" href="/">HARNESS<span>.GG</span></a>
@@ -94,7 +94,7 @@ const agentSnippetHtml = [
     </nav>
 
     <main>
-      <!-- ── HERO ──────────────────────────────────────────────── -->
+      <!-- HERO -->
       <section class="hero">
         <div class="grid-bg"></div>
         <div class="container">
@@ -124,7 +124,7 @@ const agentSnippetHtml = [
         </div>
       </section>
 
-      <!-- ── WHY ───────────────────────────────────────────────── -->
+      <!-- WHY -->
       <section class="why" id="how-it-works">
         <div class="container">
           <h2 class="section-label">THE PROBLEM</h2>
@@ -148,7 +148,7 @@ const agentSnippetHtml = [
         </div>
       </section>
 
-      <!-- ── PACKAGES ──────────────────────────────────────────── -->
+      <!-- PACKAGES -->
       <section class="packages" id="packages">
         <div class="container">
           <h2 class="section-label">AVAILABLE MODULES</h2>

@@ -1,13 +1,17 @@
 ---
+import '../styles/global.css';
+
 interface Props {
   title?: string;
   description?: string;
 }
 
 const {
-  title = 'Harness.gg — CLI Tools for AI Agents',
+  title = 'Harness.gg: CLI Tools for AI Agents',
   description = 'Open-source CLI packages that give AI agents the ability to interact with any app. No MCPs, no servers. Just install and run.',
 } = Astro.props;
+
+const currentPath = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -16,80 +20,66 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-
-    <!-- AI agent discovery -->
     <meta name="ai-tools" content="harness.gg" />
     <meta name="robots" content="index, follow, max-snippet:-1" />
-    <link rel="canonical" href="https://harness.gg" />
-
-    <!-- LLM / agent discovery -->
+    <link rel="canonical" href={`https://harness.gg${currentPath}`} />
     <link rel="alternate" type="application/json" href="/packages.json" title="Harness package registry" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM discovery index" />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://harness.gg" />
+    <meta property="og:url" content={`https://harness.gg${currentPath}`} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content="Harness.gg" />
-
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-    <style is:global>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      :root {
-        --bg:        #080c14;
-        --surface:   #0d1117;
-        --surface-1: #161b22;
-        --surface-2: #1c2230;
-        --border:    #21262d;
-        --border-1:  #30363d;
-
-        --text:      #e6edf3;
-        --text-2:    #8b949e;
-        --text-3:    #484f58;
-
-        --blue:      #58a6ff;
-        --blue-dim:  rgba(88, 166, 255, 0.12);
-        --blue-glow: rgba(88, 166, 255, 0.06);
-        --green:     #3fb950;
-        --green-dim: rgba(63, 185, 80, 0.12);
-        --orange:    #d29922;
-        --purple:    #a371f7;
-
-        --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-
-        --radius: 6px;
-        --radius-lg: 10px;
-      }
-
-      html {
-        background: var(--bg);
-        color: var(--text);
-        font-family: var(--sans);
-        font-size: 16px;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-        scroll-behavior: smooth;
-      }
-
-      body { min-height: 100vh; }
-
-      a { color: var(--blue); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-
-      code, kbd, pre {
-        font-family: var(--mono);
-        font-size: 0.875em;
-      }
-
-      ::selection { background: var(--blue-dim); }
-    </style>
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/logo-128.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
-  <body>
-    <slot />
+  <body class="min-h-screen flex flex-col">
+
+    <!-- Nav -->
+    <nav class="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+      <div class="max-w-[840px] mx-auto px-6 h-14 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5 no-underline hover:no-underline" aria-label="Harness.gg home">
+          <span class="font-mono font-semibold text-[1.15rem] tracking-tight text-primary" aria-hidden="true">{'{'}H{'}'}</span>
+          <span class="font-mono text-[0.92rem] font-medium tracking-tight text-foreground">
+            harness<span class="text-primary">.gg</span>
+          </span>
+        </a>
+        <div class="flex items-center gap-6">
+          <a href="/#packages" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">Packages</a>
+          <a href="/llms.txt" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">llms.txt</a>
+          <a href="https://github.com/harnessgg" target="_blank" rel="noopener" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-border py-11">
+      <div class="max-w-[840px] mx-auto px-6 flex items-center justify-between flex-wrap gap-6">
+        <div class="flex flex-col gap-2">
+          <a href="/" class="flex items-center gap-2 no-underline hover:no-underline" aria-label="Harness.gg home">
+            <span class="font-mono font-semibold text-[1.1rem] tracking-tight text-primary/60" aria-hidden="true">{'{'}H{'}'}</span>
+            <span class="font-mono text-[0.85rem] font-medium text-muted-foreground">
+              harness<span class="text-primary/60">.gg</span>
+            </span>
+          </a>
+          <p class="text-[0.82rem] text-muted-foreground">CLI tools for AI agents. Open source, MIT licensed.</p>
+        </div>
+        <div class="flex gap-6">
+          <a href="https://github.com/harnessgg" target="_blank" rel="noopener" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">GitHub</a>
+          <a href="https://www.npmjs.com/org/harnessgg" target="_blank" rel="noopener" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">npm</a>
+          <a href="/llms.txt" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">llms.txt</a>
+          <a href="/packages.json" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">packages.json</a>
+        </div>
+      </div>
+    </footer>
+
   </body>
 </html>

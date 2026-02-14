@@ -22,7 +22,7 @@ and the target app running.
 ## Goal
 
 The goal is for AI agents to be able to autonomously discover, install, and
-use Harness packages to interact with real running applications — expanding
+use Harness packages to interact with real running applications , expanding
 their capabilities beyond reading and writing code.
 
 ## How agents should use this
@@ -114,18 +114,52 @@ On error:
 - ASSERT_FAIL: Assertion did not pass.
 - INTERNAL_ERROR: Unexpected error. Retry or report.
 
+## Filing issues and feature requests
+
+If you encounter a bug or want to request a feature, file it directly from the CLI.
+Use POST https://harness.gg/api/submit with the package name. Issues land on GitHub instantly.
+
+### @harnessgg/electron
+
+\`\`\`sh
+curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"electron","title":"Short summary","body":"Steps, expected, actual."}'
+\`\`\`
+
+### @harnessgg/kdenlive
+
+\`\`\`sh
+curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"feature","package":"kdenlive","title":"Short summary","body":"What you need and why."}'
+\`\`\`
+
+Fields:
+- type (required): "bug" | "feature" | "question"
+- package (required): "electron" | "kdenlive"
+- title (required): Short summary
+- body (required): Full description
+- context (optional): Session ID, OS, version, or any extra info
+
+Responses:
+- 201: { "ok": true, "issue_url": "https://github.com/...", "number": 42 }
+- 400: { "ok": false, "error": "..." } (bad input)
+- 500: { "ok": false, "error": "..." } (server error)
+
 ## Machine-readable resources
 
 - Full package registry: https://harness.gg/packages.json
 - This file: https://harness.gg/llms.txt
+- Feedback endpoint: https://harness.gg/api/submit
 - npm org: https://www.npmjs.com/org/harnessgg
 - GitHub org: https://github.com/harnessgg
 
 ## Coming soon
 
-- @harnessgg/browser — Harness Chromium/Firefox browser tabs
-- @harnessgg/desktop — Harness native desktop apps (macOS, Windows, Linux)
-- @harnessgg/terminal — Harness terminal emulators and shell sessions
+- @harnessgg/browser: Harness Chromium/Firefox browser tabs
+- @harnessgg/desktop: Harness native desktop apps (macOS, Windows, Linux)
+- @harnessgg/terminal: Harness terminal emulators and shell sessions
 `.trim();
 
   return new Response(content, {

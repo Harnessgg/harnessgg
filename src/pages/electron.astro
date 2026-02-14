@@ -1,0 +1,478 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CopyButton } from '@/components/CopyButton';
+
+const version = '0.1.0';
+const install = 'npm i -D @harnessgg/electron';
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const termCmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const quickFlowHtml = [
+  comment('# 1. Start your Electron app with debugging enabled'),
+  termCmd('electron . --remote-debugging-port=9222'),
+  nl,
+  comment('# 2. Connect'),
+  termCmd('harness-electron connect --port 9222'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"target":"My App"}}'),
+  nl,
+  comment('# 3. Inspect the DOM'),
+  termCmd('harness-electron dom --format summary --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"interactive":[{"role":"button","name":"Sign in"}]}}'),
+  nl,
+  comment('# 4. Click a button'),
+  termCmd('harness-electron click --role button --name "Sign in" --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"selector":"[role=button]"}}'),
+  nl,
+  comment('# 5. Type into an input'),
+  termCmd('harness-electron type --css "input[type=email]" --value "user@example.com" --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"typed":20}}'),
+  nl,
+  comment('# 6. Assert'),
+  termCmd('harness-electron assert --kind url --expected "/dashboard" --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"actual":"/dashboard"}}'),
+  nl,
+  comment('# 7. Screenshot'),
+  termCmd('harness-electron screenshot --path ./debug.png --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"path":"./debug.png","bytes":48210}}'),
+  nl,
+  comment('# 8. Disconnect'),
+  termCmd('harness-electron disconnect --session ses_a1b2'),
+  json('{"ok":true,"session":"ses_a1b2","data":{"closed":true}}'),
+].join('\n');
+
+const commands = [
+  {
+    name: 'connect',
+    synopsis: 'harness-electron connect --port <n> [--host <h>]',
+    description: 'Connect to an Electron app via CDP. Returns a session ID.',
+    flags: [
+      { flag: '--port', req: true,  desc: 'CDP port (e.g. 9222)' },
+      { flag: '--host', req: false, desc: 'Host (default: localhost)' },
+    ],
+  },
+  {
+    name: 'dom',
+    synopsis: 'harness-electron dom --session <id> [--format summary|tree|html]',
+    description: 'Inspect the DOM. Use summary first to discover interactive elements.',
+    flags: [
+      { flag: '--session', req: true,  desc: 'Session ID' },
+      { flag: '--format',  req: false, desc: 'summary | tree | html' },
+      { flag: '--css',     req: false, desc: 'Scope to element' },
+    ],
+  },
+  {
+    name: 'click',
+    synopsis: 'harness-electron click [--css|--role|--text|--testid] --session <id>',
+    description: 'Click an element. Prefer --role + --name for accessible targets.',
+    flags: [
+      { flag: '--session',                           req: true,  desc: 'Session ID' },
+      { flag: '--css / --xpath / --text / --role / --testid', req: false, desc: 'Selector (one required)' },
+      { flag: '--name',                              req: false, desc: 'Accessible name (use with --role)' },
+    ],
+  },
+  {
+    name: 'type',
+    synopsis: 'harness-electron type [selector] --value <text> --session <id>',
+    description: 'Type text into an input. Clears existing content first.',
+    flags: [
+      { flag: '--session',                      req: true,  desc: 'Session ID' },
+      { flag: '--value',                        req: true,  desc: 'Text to type' },
+      { flag: '--css / --role / --xpath / --testid', req: false, desc: 'Selector' },
+    ],
+  },
+  {
+    name: 'wait',
+    synopsis: 'harness-electron wait --kind visible|url|text --expected <val> --session <id>',
+    description: 'Wait for a condition. Useful after navigation or async actions.',
+    flags: [
+      { flag: '--session',  req: true,  desc: 'Session ID' },
+      { flag: '--kind',     req: true,  desc: 'visible | url | text' },
+      { flag: '--expected', req: true,  desc: 'Expected value' },
+      { flag: '--timeout',  req: false, desc: 'Max ms (default: 5000)' },
+    ],
+  },
+  {
+    name: 'screenshot',
+    synopsis: 'harness-electron screenshot --path <file> --session <id>',
+    description: 'Capture a screenshot of the viewport, full page, or element.',
+    flags: [
+      { flag: '--session', req: true,  desc: 'Session ID' },
+      { flag: '--path',    req: true,  desc: 'Output .png path' },
+      { flag: '--full',    req: false, desc: 'Full-page screenshot' },
+      { flag: '--css',     req: false, desc: 'Element screenshot' },
+    ],
+  },
+  {
+    name: 'assert',
+    synopsis: 'harness-electron assert --kind url|visible|text|title --expected <val> --session <id>',
+    description: 'Assert a condition. Returns ok:false + ASSERT_FAIL on failure.',
+    flags: [
+      { flag: '--session',  req: true,  desc: 'Session ID' },
+      { flag: '--kind',     req: true,  desc: 'url | visible | text | title' },
+      { flag: '--expected', req: true,  desc: 'Expected value' },
+      { flag: '--css',      req: false, desc: 'Scope to element' },
+    ],
+  },
+  {
+    name: 'evaluate',
+    synopsis: 'harness-electron evaluate --script <js> --session <id>',
+    description: 'Execute JavaScript in the page context and return the result as JSON.',
+    flags: [
+      { flag: '--session', req: true, desc: 'Session ID' },
+      { flag: '--script',  req: true, desc: 'JavaScript expression' },
+    ],
+  },
+  {
+    name: 'disconnect',
+    synopsis: 'harness-electron disconnect --session <id>',
+    description: 'Close the CDP session.',
+    flags: [
+      { flag: '--session', req: true, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'sessions',
+    synopsis: 'harness-electron sessions [list|prune]',
+    description: 'List all sessions or prune stale ones.',
+    flags: [],
+  },
+  {
+    name: 'capabilities',
+    synopsis: 'harness-electron capabilities',
+    description: 'Show what this harness can do. Good first command for an agent to run.',
+    flags: [],
+  },
+];
+
+const errorCodes = [
+  { code: 'INVALID_INPUT',    exit: 1, retryable: false, desc: 'Bad or missing arguments. Fix the command.' },
+  { code: 'CONNECT_FAILED',   exit: 1, retryable: true,  desc: 'Could not reach the CDP port. Check the app is running with --remote-debugging-port.' },
+  { code: 'TARGET_NOT_FOUND', exit: 1, retryable: true,  desc: 'No element matched the selector. Use dom --format summary.' },
+  { code: 'INVALID_SELECTOR', exit: 1, retryable: false, desc: 'Malformed selector string. Fix the syntax.' },
+  { code: 'ACTION_FAILED',    exit: 1, retryable: true,  desc: 'Action ran but something went wrong (e.g. element not interactable).' },
+  { code: 'TIMEOUT',          exit: 1, retryable: true,  desc: 'Condition did not occur within the timeout.' },
+  { code: 'ASSERT_FAIL',      exit: 1, retryable: false, desc: 'Assertion did not pass. Inspect actual value in error.message.' },
+  { code: 'INTERNAL_ERROR',   exit: 2, retryable: true,  desc: 'Unexpected error. Retry once; if it persists, file a bug.' },
+];
+---
+
+<Layout
+  title="@harnessgg/electron | Harness.gg"
+  description="CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol."
+>
+
+  <!-- Header -->
+  <section class="pt-10 pb-10 wrap">
+    <p class="breadcrumb">
+      <a href="/">harness.gg</a>
+      <span>/</span>
+      electron
+    </p>
+
+    <div class="title-row">
+      <h1>@harnessgg/electron</h1>
+      <Badge className="badge-live">Published</Badge>
+      <Badge variant="outline" className="badge-ver">v{version}</Badge>
+    </div>
+
+    <p class="tagline">
+      CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol.
+      Connect, inspect DOM, click, type, screenshot, assert, and evaluate. All with structured JSON output.
+    </p>
+
+    <div class="install-row">
+      <code>{install}</code>
+      <CopyButton client:load text={install} />
+    </div>
+
+    <div class="ext-links">
+      <a href="https://www.npmjs.com/package/@harnessgg/electron" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">npm &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/electron" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/electron/tree/main/docs/llm" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">LLM docs &nearr;</Badge>
+      </a>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Prerequisite -->
+  <section class="wrap sec">
+    <h2>Prerequisite</h2>
+    <p class="sec-intro">Launch your Electron app with the CDP debugging port exposed:</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">terminal</span>
+      </div>
+      <pre class="term-body"><span class="t-prompt">$</span> electron . --remote-debugging-port=9222</pre>
+    </div>
+    <p class="note">Node.js &ge; 20 required.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Quick flow -->
+  <section class="wrap sec">
+    <h2>Quick flow</h2>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">full agent session</span>
+      </div>
+      <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Command reference -->
+  <section class="wrap sec" id="commands">
+    <h2>Command reference</h2>
+    <div class="cmd-list">
+      {commands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Response shape -->
+  <section class="wrap sec">
+    <h2>Response shape</h2>
+    <p class="sec-intro">Every command writes a single JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
+
+    <div class="shape-grid">
+      <div>
+        <p class="shape-label">Success</p>
+        <pre class="code-block">{`{
+  "ok": true,
+  "protocolVersion": "1.0",
+  "command": "click",
+  "session": "ses_a1b2c3",
+  "data": { "selector": "[role=button]" }
+}`}</pre>
+      </div>
+      <div>
+        <p class="shape-label">Error</p>
+        <pre class="code-block">{`{
+  "ok": false,
+  "protocolVersion": "1.0",
+  "command": "click",
+  "session": "ses_a1b2c3",
+  "error": {
+    "code": "TARGET_NOT_FOUND",
+    "message": "No element matched",
+    "retryable": true,
+    "suggestedNext": ["dom --format summary"]
+  }
+}`}</pre>
+      </div>
+    </div>
+
+    <table class="flag-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ok</code></td><td>boolean</td><td>true on success, false on error</td></tr>
+        <tr><td><code>protocolVersion</code></td><td>string</td><td>Always "1.0"</td></tr>
+        <tr><td><code>command</code></td><td>string</td><td>The command that was run</td></tr>
+        <tr><td><code>session</code></td><td>string</td><td>Session ID (ses_xxx)</td></tr>
+        <tr><td><code>data</code></td><td>object</td><td>Command-specific payload (success only)</td></tr>
+        <tr><td><code>error</code></td><td>object</td><td>code, message, retryable, suggestedNext (error only)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Error codes -->
+  <section class="wrap sec">
+    <h2>Error codes</h2>
+    <table class="flag-table">
+      <thead><tr><th>Code</th><th>Exit</th><th>Retryable</th><th>Action</th></tr></thead>
+      <tbody>
+        {errorCodes.map(e => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td class="mono-cell">{e.exit}</td>
+            <td class={e.retryable ? 'req-yes' : 'req-no'}>{e.retryable ? 'yes' : 'no'}</td>
+            <td>{e.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Submit feedback -->
+  <section class="wrap sec">
+    <h2>Submit feedback</h2>
+    <p class="sec-intro">
+      Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
+      Issues land on <a href="https://github.com/harnessgg/electron" target="_blank" rel="noopener">harnessgg/Harness-electron</a>.
+    </p>
+
+    <table class="flag-table" style="margin-bottom: 1.5rem">
+      <thead><tr><th>Field</th><th>Required</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="req-yes">yes</td><td class="mono-cell">"bug" | "feature" | "question"</td></tr>
+        <tr><td><code>package</code></td><td class="req-yes">yes</td><td class="mono-cell">"electron"</td></tr>
+        <tr><td><code>title</code></td><td class="req-yes">yes</td><td>Short summary</td></tr>
+        <tr><td><code>body</code></td><td class="req-yes">yes</td><td>Full description</td></tr>
+        <tr><td><code>context</code></td><td class="req-no">no</td><td>Session ID, OS, version…</td></tr>
+      </tbody>
+    </table>
+
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">file a bug report</span>
+      </div>
+      <pre class="term-body" set:html={`<span class="t-prompt">$</span> curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"electron","title":"connect fails","body":"Steps..."}'`}></pre>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* Fonts */
+  h1, h2  { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  h2      { font-family: 'Source Serif 4', Georgia, serif; }
+  code, pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  /* Layout */
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+  .sec  { padding: 40px 0; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 0.82rem; color: var(--muted-foreground); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb span { margin: 0 6px; opacity: 0.4; }
+
+  /* Title row */
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 500; color: var(--foreground); }
+  .badge-live { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); border: none; font-size: 0.7rem; }
+  .badge-ver  { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted-foreground); }
+
+  /* Tagline */
+  .tagline { font-size: 1rem; color: var(--muted-foreground); max-width: 580px; line-height: 1.75; margin-bottom: 20px; }
+
+  /* Install row */
+  .install-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    background: var(--secondary); border: 2px solid #5a7a8a; border-radius: 10px;
+    max-width: 440px; margin-bottom: 16px;
+  }
+  .install-row code { font-size: 0.88rem; color: var(--foreground); }
+
+  /* External links */
+  .ext-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ext-badge { font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+  .ext-badge:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Section headings */
+  h2 { font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+  .sec-intro { font-size: 0.92rem; color: var(--muted-foreground); margin-bottom: 20px; line-height: 1.7; }
+  .sec-intro a { color: var(--primary); }
+  .note { font-size: 0.82rem; color: var(--muted-foreground); margin-top: 12px; }
+
+  /* Terminal blocks */
+  .term-block { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(30,42,52,0.12); border: 2px solid #5a7a8a; }
+  .term-bar {
+    display: flex; align-items: center; gap: 6px; padding: 10px 16px;
+    background: #283440; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #7a9aaa; opacity: 0.5; }
+  .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
+  .term-body {
+    padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; line-height: 1.85; overflow-x: auto;
+    background: #1e2830; color: #c4ccd4;
+  }
+  .t-comment { color: rgba(255,255,255,0.2); }
+  .t-prompt  { color: #7a9aaa; user-select: none; }
+  .t-json    { color: rgba(255,255,255,0.3); }
+
+  /* Command cards */
+  .cmd-list  { display: flex; flex-direction: column; gap: 16px; }
+  .cmd-card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .cmd-head  { margin-bottom: 10px; }
+  .cmd-name  { font-size: 0.95rem; font-weight: 500; color: var(--primary); }
+  .cmd-synopsis {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--muted-foreground);
+    background: var(--secondary); padding: 9px 14px; border-radius: 8px;
+    margin-bottom: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    border: 2px solid #5a7a8a;
+  }
+  .cmd-desc { font-size: 0.87rem; color: var(--muted-foreground); margin-bottom: 14px; line-height: 1.65; }
+
+  /* Tables */
+  .flag-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .flag-table th {
+    text-align: left; padding: 7px 12px;
+    font-size: 0.73rem; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--muted-foreground); border-bottom: 1px solid var(--border);
+  }
+  .flag-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground); vertical-align: top; line-height: 1.5;
+  }
+  .flag-table td:first-child code { color: var(--foreground); font-size: 0.8rem; }
+  .req-yes { color: var(--primary) !important; font-size: 0.8rem; font-weight: 500; }
+  .req-no  { color: var(--muted-foreground) !important; font-size: 0.8rem; }
+  .mono-cell { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+
+  /* Response shape */
+  .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .shape-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .code-block {
+    background: #1e2830; color: #c4ccd4; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; padding: 18px 20px; border-radius: 12px; overflow-x: auto; line-height: 1.7;
+    border: 2px solid #5a7a8a;
+  }
+  .inline-code { background: var(--secondary); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+
+  @media (max-width: 600px) {
+    .shape-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.2rem; }
+  }
+</style>

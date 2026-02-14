@@ -9,9 +9,26 @@ const registry = {
   $schema: 'https://harness.gg/schemas/registry.json',
   version: '1.0',
   updated: '2026-02-13',
-  description: 'Harness.gg package registry — CLI tools for AI agents',
+  description: 'Harness.gg package registry: CLI tools for AI agents',
   homepage: 'https://harness.gg',
   llmsTxt: 'https://harness.gg/llms.txt',
+  feedbackEndpoint: {
+    url: 'https://harness.gg/api/submit',
+    method: 'POST',
+    contentType: 'application/json',
+    description: 'AI agents can file bug reports and feature requests. Issues land on GitHub.',
+    body: {
+      type: { type: 'string', enum: ['bug', 'feature', 'question'], required: true },
+      package: { type: 'string', description: 'Package name e.g. "electron"', required: true },
+      title: { type: 'string', description: 'Short summary', required: true },
+      body: { type: 'string', description: 'Full description', required: true },
+      context: { type: 'string', description: 'Optional extra context (session, OS, version)', required: false },
+    },
+    responses: {
+      201: { ok: true, issue_url: 'string', number: 'number' },
+      '4xx/5xx': { ok: false, error: 'string' },
+    },
+  },
   packages: [
     {
       name: '@harnessgg/electron',
@@ -23,7 +40,7 @@ const registry = {
         npx: 'npx @harnessgg/electron --help',
       },
       description:
-        'CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol. Connect, inspect DOM, click, type, screenshot, assert, and evaluate JavaScript — all with structured JSON output.',
+        'CLI harness for AI agents to interact with Electron apps via Chrome DevTools Protocol. Connect, inspect DOM, click, type, screenshot, assert, and evaluate JavaScript. All with structured JSON output.',
       requirements: {
         node: '>=20',
         targetApp: 'Electron app running with --remote-debugging-port or --inspect-brk',
@@ -111,12 +128,12 @@ const registry = {
         },
       ],
       responseShape: {
-        ok: 'boolean — true on success, false on error',
-        protocolVersion: 'string — always "1.0"',
-        command: 'string — the command that was run',
-        session: 'string — session ID (ses_xxx)',
-        data: 'object — command-specific payload on success',
-        error: 'object — present on failure: { code, message, retryable, suggestedNext }',
+        ok: 'boolean, true on success or false on error',
+        protocolVersion: 'string, always "1.0"',
+        command: 'string, the command that was run',
+        session: 'string, session ID (ses_xxx)',
+        data: 'object, command-specific payload on success',
+        error: 'object, present on failure: { code, message, retryable, suggestedNext }',
       },
       errorCodes: [
         'INVALID_INPUT',

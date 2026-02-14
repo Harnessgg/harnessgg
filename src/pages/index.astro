@@ -1,659 +1,154 @@
 ---
-/**
- *  Harness.gg — "Ocean Slate"
- *  Coastal fog, quiet mornings. Muted steel-blue accent on
- *  cool paper. Serif headings, monospace code. Calm and clear.
- */
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const packages = [
   {
     name: '@harnessgg/electron',
-    bin: 'harness-electron',
-    install: 'npm i -D @harnessgg/electron',
     version: '0.1.0',
+    description: 'Interact with any Electron app via Chrome DevTools Protocol. Click, type, screenshot, assert. Structured JSON output.',
+    href: '/electron',
     status: 'published',
-    description: 'Interact with any Electron app through the Chrome DevTools Protocol. Click, type, screenshot, assert — all from the CLI with structured JSON output.',
-    tags: ['electron', 'cdp', 'playwright', 'debugging'],
-    github: 'https://github.com/harnessgg/electron',
-    npm: 'https://www.npmjs.com/package/@harnessgg/electron',
-    commands: ['connect', 'dom', 'click', 'type', 'screenshot', 'assert', 'evaluate', 'wait'],
+  },
+  {
+    name: '@harnessgg/kdenlive',
+    version: null,
+    description: 'Harness the Kdenlive video editor. Automate timelines, cuts, and exports from the CLI.',
+    href: null,
+    status: 'soon',
   },
 ];
-
-const comingSoon = [
-  { name: '@harnessgg/browser', description: 'Harness any Chromium or Firefox browser tab.' },
-  { name: '@harnessgg/desktop', description: 'Control native desktop apps on macOS, Windows, and Linux.' },
-  { name: '@harnessgg/terminal', description: 'Interact with terminal emulators and shell sessions.' },
-];
-
-const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
-const comment = (t: string) => c('t-comment', t);
-const cmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
-const json = (t: string) => c('t-json', t);
-const nl = '\n';
-
-const heroTerminalHtml = [
-  comment('# install the tool'),
-  cmd('npm i -D @harnessgg/electron'),
-  nl,
-  comment('# connect to your app'),
-  cmd('harness-electron connect --port 9222'),
-  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"target":"My Electron App"&#125;&#125;'),
-  nl,
-  comment('# interact with it'),
-  cmd('harness-electron click --role button --name "Sign in"'),
-  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"selector":"[role=button]"&#125;&#125;'),
-  nl,
-  comment('# check the result'),
-  cmd('harness-electron assert --kind url --expected "/dashboard"'),
-  json('&#123;"ok":true,"session":"ses_a1b2","data":&#123;"actual":"/dashboard"&#125;&#125;'),
-].join('\n');
-
-const agentSnippetHtml = [
-  comment('# discover available tools'),
-  cmd('curl https://harness.gg/llms.txt'),
-  nl,
-  comment('# or the structured registry'),
-  cmd('curl https://harness.gg/packages.json'),
-  nl,
-  comment('# install and go'),
-  cmd('npm i -D @harnessgg/electron'),
-  cmd('harness-electron --help'),
-].join('\n');
-
-/**
- * Logo: A stylised "H" formed from two vertical bars connected by a
- * horizontal harness strap, with small "prong" notches on each bar
- * evoking a buckle/harness. Rendered as a clean SVG path.
- */
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Open-source CLI packages that give AI agents the ability to interact with any app." />
-    <title>Harness.gg — CLI Tools for AI Agents</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <!-- ── NAV ─────────────────────────────────────────── -->
-    <nav>
-      <div class="nav-inner">
-        <a class="logo-link" href="/" aria-label="Harness.gg home">
-          <span class="logo-mark" aria-hidden="true">{'{'}H{'}'}</span>
-          <span class="wordmark">harness<span class="wm-accent">.gg</span></span>
-        </a>
-        <div class="nav-links">
-          <a href="#packages">Packages</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="/llms.txt">llms.txt</a>
-          <a href="https://github.com/harnessgg" target="_blank" rel="noopener">GitHub</a>
-        </div>
-      </div>
-    </nav>
+<Layout title="Harness.gg: CLI Tools for AI Agents">
 
-    <main>
-      <!-- ── HERO ──────────────────────────────────────── -->
-      <section class="hero">
-        <div class="container">
-          <!-- Large hero logo -->
-          <div class="hero-logo" aria-hidden="true">{'{'}H{'}'}</div>
+  <!-- HERO -->
+  <section class="pt-24 pb-20 max-w-[840px] mx-auto px-6">
+    <h1 class="hero-heading"> Give AI agents hands
+    </h1>
 
-          <div class="badge">
-            <span class="badge-dot"></span>
-            Open source &middot; v0.1.0 &middot; MIT
-          </div>
+    <p class="hero-sub">
+            Open source CLI tools that let AI agents control desktop apps
+      <br />
+      No MCP. No setup. Just install and go.
 
-          <h1>Give AI agents<br /><em>hands.</em></h1>
+    </p>
 
-          <p class="hero-sub">
-            Open-source CLI packages that let AI agents interact with real apps —
-            click buttons, fill forms, take screenshots, assert state.
-            No MCPs. No servers. No setup. Just <code>npm install</code>.
-          </p>
+    <div class="hero-actions">
+      <a href="https://github.com/Harnessgg" class="btn-primary">View Github &rarr;</a>
+      <span class="hero-meta">Open source &middot; MIT</span>
+    </div>
+  </section>
 
-          <div class="terminal">
-            <div class="term-header">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="term-title">agent task</span>
-            </div>
-            <pre class="term-body" set:html={heroTerminalHtml}></pre>
-          </div>
+  <Separator />
 
-          <div class="hero-actions">
-            <a class="btn-primary" href="#packages">Browse packages</a>
-            <a class="btn-outline" href="/llms.txt">llms.txt &rarr;</a>
-          </div>
-        </div>
-      </section>
+  <!-- PACKAGES -->
+  <section class="py-16 max-w-[840px] mx-auto px-6" id="packages">
+    <p class="text-[0.78rem] font-semibold tracking-widest text-primary mb-6 uppercase">Packages</p>
 
-      <!-- ── DIVIDER ───────────────────────────────────── -->
-      <div class="section-divider" aria-hidden="true">{'{'}H{'}'}</div>
-
-      <!-- ── HOW ───────────────────────────────────────── -->
-      <section class="how" id="how-it-works">
-        <div class="container">
-          <p class="section-label">How it works</p>
-          <h2>The simplest path from agent to app</h2>
-
-          <div class="why-grid">
-            <div class="why-card">
-              <div class="why-icon">&times;</div>
-              <h3>MCPs require setup</h3>
-              <p>Model Context Protocol servers need a running daemon, config files, and IDE integration. An autonomous agent can't set that up mid-task.</p>
-            </div>
-            <div class="why-card">
-              <div class="why-icon">&times;</div>
-              <h3>Agents are stuck reading</h3>
-              <p>AI agents can read and write code beautifully. But they can't click a button, verify a UI state, or debug a running app.</p>
-            </div>
-            <div class="why-card good">
-              <div class="why-icon check">&check;</div>
-              <h3>Harness: just a CLI</h3>
-              <p>Any agent that can run a shell command can use Harness. Install via npm, call it like any tool. Output is always JSON.</p>
-            </div>
-          </div>
-
-          <div class="steps">
-            <div class="step">
-              <div class="step-num">1</div>
-              <div>
-                <strong>Discover</strong>
-                <p>Agents find packages via llms.txt, npm search, or documentation.</p>
+    <ul class="divide-y divide-border">
+      {packages.map(pkg => (
+        <li>
+          {pkg.href ? (
+            <a
+              href={pkg.href}
+              class="group flex items-center justify-between gap-6 py-5 no-underline hover:no-underline"
+            >
+              <div class="flex flex-col gap-1.5 min-w-0">
+                <code class="font-mono text-[0.95rem] font-medium text-foreground group-hover:text-primary transition-colors">
+                  {pkg.name}
+                </code>
+                <span class="text-[0.84rem] text-muted-foreground leading-relaxed">{pkg.description}</span>
               </div>
-            </div>
-            <div class="step-line"></div>
-            <div class="step">
-              <div class="step-num">2</div>
-              <div>
-                <strong>Install</strong>
-                <p>One command: <code>npm i -D @harnessgg/electron</code></p>
+              <div class="flex items-center gap-2.5 shrink-0">
+                <Badge variant="outline" className="font-mono text-[0.7rem] text-muted-foreground">v{pkg.version}</Badge>
+                <Badge className="text-[0.7rem] bg-primary/10 text-primary border-0 hover:bg-primary/15">Published</Badge>
+                <span class="text-primary text-base transition-transform group-hover:translate-x-1">&rarr;</span>
               </div>
-            </div>
-            <div class="step-line"></div>
-            <div class="step">
-              <div class="step-num">3</div>
-              <div>
-                <strong>Run</strong>
-                <p>Every command returns structured JSON. Parse, react, continue.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── PACKAGES ──────────────────────────────────── -->
-      <section class="packages" id="packages">
-        <div class="container">
-          <p class="section-label">Packages</p>
-          <h2>Built for machines, readable by humans</h2>
-
-          {packages.map(pkg => (
-            <article class="pkg-card">
-              <div class="pkg-top">
-                <div class="pkg-meta">
-                  <h3>{pkg.name}</h3>
-                  <span class="pkg-ver">v{pkg.version}</span>
-                  <span class="pkg-badge">Published</span>
-                </div>
-                <div class="pkg-links">
-                  <a href={pkg.npm} target="_blank" rel="noopener">npm &nearr;</a>
-                  <a href={pkg.github} target="_blank" rel="noopener">GitHub &nearr;</a>
-                </div>
-              </div>
-              <p class="pkg-desc">{pkg.description}</p>
-
-              <div class="pkg-install">
-                <code>{pkg.install}</code>
-                <button class="copy-btn" data-copy={pkg.install}>Copy</button>
-              </div>
-
-              <div class="pkg-commands">
-                <span class="cmd-label">Commands</span>
-                <div class="cmd-list">
-                  {pkg.commands.map(c => (
-                    <span class="cmd-chip">{c}</span>
-                  ))}
-                </div>
-              </div>
-
-              <div class="pkg-tags">
-                {pkg.tags.map(tag => (
-                  <span class="tag">{tag}</span>
-                ))}
-              </div>
-            </article>
-          ))}
-
-          <div class="coming-soon">
-            <h3>Coming soon</h3>
-            <div class="soon-grid">
-              {comingSoon.map(pkg => (
-                <div class="soon-card">
-                  <code>{pkg.name}</code>
-                  <p>{pkg.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── DISCOVERY ─────────────────────────────────── -->
-      <section class="discovery">
-        <div class="container">
-          <p class="section-label">For AI agents</p>
-          <h2>Autonomous discovery, built in</h2>
-          <p class="disco-sub">
-            Harness is designed so agents can discover and use it <em>autonomously</em> —
-            no human needs to set anything up.
-          </p>
-
-          <div class="disco-grid">
-            <div class="disco-card">
-              <h4><a href="/llms.txt">/llms.txt</a></h4>
-              <p>Machine-readable index of all packages, commands, and install instructions.</p>
-            </div>
-            <div class="disco-card">
-              <h4><a href="/packages.json">/packages.json</a></h4>
-              <p>Structured JSON registry with install commands, specs, and schemas.</p>
-            </div>
-            <div class="disco-card">
-              <h4>JSON-first output</h4>
-              <p>Every CLI command returns a single JSON object to stdout.</p>
-            </div>
-            <div class="disco-card">
-              <h4>Zero config</h4>
-              <p>Install the package, run the binary. No daemons, no config files.</p>
-            </div>
-          </div>
-
-          <div class="terminal">
-            <div class="term-header">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              <span class="term-title">how an agent finds harness</span>
-            </div>
-            <pre class="term-body" set:html={agentSnippetHtml}></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── FOOTER ────────────────────────────────────── -->
-      <footer>
-        <div class="container footer-inner">
-          <div class="footer-left">
-            <a class="footer-logo" href="/" aria-label="Harness.gg home">
-              <span class="logo-mark" aria-hidden="true">{'{'}H{'}'}</span>
-              <span class="wordmark">harness<span class="wm-accent">.gg</span></span>
             </a>
-            <p>CLI tools for AI agents. Open source, MIT licensed.</p>
-          </div>
-          <div class="footer-links">
-            <a href="https://github.com/harnessgg" target="_blank" rel="noopener">GitHub</a>
-            <a href="https://www.npmjs.com/org/harnessgg" target="_blank" rel="noopener">npm</a>
-            <a href="/llms.txt">llms.txt</a>
-            <a href="/packages.json">packages.json</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+          ) : (
+            <div class="flex items-center justify-between gap-6 py-5 opacity-45">
+              <div class="flex flex-col gap-1.5 min-w-0">
+                <code class="font-mono text-[0.95rem] font-medium text-foreground">{pkg.name}</code>
+                <span class="text-[0.84rem] text-muted-foreground leading-relaxed">{pkg.description}</span>
+              </div>
+              <div class="shrink-0">
+                <Badge variant="secondary" className="text-[0.7rem]">Soon</Badge>
+              </div>
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
 
-    <script>
-      document.querySelectorAll('.copy-btn').forEach(el => {
-        const btn = el as HTMLButtonElement;
-        btn.addEventListener('click', () => {
-          const text = btn.dataset['copy'] || '';
-          navigator.clipboard.writeText(text).then(() => {
-            const orig = btn.textContent;
-            btn.textContent = 'Copied!';
-            btn.style.color = 'var(--accent)';
-            setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
-          });
-        });
-      });
-    </script>
+  <Separator />
 
-    <style>
-      /* ── Reset ──────────────────────────────────────────── */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <!-- DISCOVERY -->
+  <section class="py-12 max-w-[840px] mx-auto px-6">
+    <p class="text-[0.78rem] font-semibold tracking-widest text-primary mb-4 uppercase">For AI agents</p>
+    <div class="flex items-center gap-3 flex-wrap">
+      <a href="/llms.txt" class="font-mono text-[0.82rem] text-muted-foreground hover:text-primary transition-colors no-underline">/llms.txt</a>
+      <span class="text-border text-sm">&middot;</span>
+      <a href="/packages.json" class="font-mono text-[0.82rem] text-muted-foreground hover:text-primary transition-colors no-underline">/packages.json</a>
+      <span class="text-border text-sm">&middot;</span>
+      <span class="font-mono text-[0.82rem] text-muted-foreground">POST /api/submit</span>
+    </div>
+  </section>
 
-      /* ── Ocean Slate palette ────────────────────────────── */
-      :root {
-        --bg:       #f2f4f6;
-        --bg2:      #e6eaee;
-        --surface:  #f8f9fb;
-        --border:   rgba(55,70,90,0.1);
-        --border2:  rgba(55,70,90,0.16);
+</Layout>
 
-        --text:     #1e2a34;
-        --text2:    #5a6a78;
-        --text3:    #8a96a2;
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;700&display=swap');
 
-        --accent:   #5a7a8a;
-        --accent-l: #6a8ea0;
-        --accent-bg:rgba(90,122,138,0.08);
-        --accent-shadow: rgba(90,122,138,0.2);
-        --accent-sel: rgba(90,122,138,0.15);
-        --accent-ul: rgba(90,122,138,0.3);
-        --good-border: rgba(90,122,138,0.25);
+  .hero-heading {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: clamp(2.6rem, 6.5vw, 3.8rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+    margin-bottom: 1.5rem;
+  }
 
-        --term-bg:  #1e2830;
-        --term-bar: #283440;
-        --term-prompt: #7a9aaa;
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted-foreground);
+    max-width: 500px;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+  }
 
-        --mono: 'IBM Plex Mono', ui-monospace, monospace;
-        --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
-        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
 
-        --radius: 10px;
-        --radius-lg: 14px;
-        --shadow-sm: 0 1px 3px rgba(30,42,52,0.04);
-        --shadow: 0 4px 16px rgba(30,42,52,0.06);
-        --shadow-lg: 0 12px 40px rgba(30,42,52,0.08);
-      }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.6rem 1.25rem;
+    background: var(--primary);
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
 
-      html {
-        background: var(--bg);
-        color: var(--text);
-        font-family: var(--sans);
-        font-size: 16px;
-        line-height: 1.7;
-        -webkit-font-smoothing: antialiased;
-        scroll-behavior: smooth;
-      }
-      body { min-height: 100vh; }
-      a { color: var(--accent); text-decoration: none; }
-      a:hover { text-decoration: underline; text-decoration-color: var(--accent-ul); }
-      code, pre { font-family: var(--mono); font-size: 0.875em; }
-      ::selection { background: var(--accent-sel); }
+  .btn-primary:hover {
+    opacity: 0.88;
+    text-decoration: none;
+  }
 
-      .container { max-width: 840px; margin: 0 auto; padding: 0 24px; }
-
-      /* ── Nav ────────────────────────────────────────────── */
-      nav {
-        position: sticky; top: 0; z-index: 100;
-        border-bottom: 1px solid var(--border);
-        background: rgba(242, 244, 246, 0.82);
-        backdrop-filter: blur(16px) saturate(1.2);
-      }
-      .nav-inner {
-        max-width: 840px; margin: 0 auto; padding: 0 24px;
-        height: 56px; display: flex; align-items: center; justify-content: space-between;
-      }
-      .logo-link {
-        display: flex; align-items: center; gap: 10px;
-        text-decoration: none;
-      }
-      .logo-link:hover { text-decoration: none; }
-      .logo-mark { color: var(--accent); flex-shrink: 0; font-family: var(--mono); font-weight: 600; font-size: 1.15rem; letter-spacing: -0.02em; }
-      .wordmark {
-        font-family: var(--mono); font-size: 0.92rem;
-        font-weight: 500; color: var(--text);
-        letter-spacing: -0.01em;
-      }
-      .wm-accent { color: var(--accent); }
-      .nav-links { display: flex; gap: 26px; align-items: center; }
-      .nav-links a {
-        font-size: 0.875rem; color: var(--text2);
-        text-decoration: none; font-weight: 500; transition: color 0.2s;
-      }
-      .nav-links a:hover { color: var(--text); text-decoration: none; }
-
-      /* ── Hero ───────────────────────────────────────────── */
-      .hero { padding: 96px 0 72px; }
-
-      .hero-logo {
-        color: var(--accent); margin-bottom: 28px;
-        opacity: 0.85; font-family: var(--mono); font-weight: 600;
-        font-size: 3.2rem; letter-spacing: -0.02em;
-      }
-
-      .badge {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 5px 14px; border: 1px solid var(--border2);
-        border-radius: 100px; background: var(--surface);
-        font-size: 0.78rem; color: var(--text2); font-weight: 500;
-        margin-bottom: 28px;
-      }
-      .badge-dot {
-        width: 6px; height: 6px; border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 6px var(--accent-shadow);
-        animation: pulse 3s ease-in-out infinite;
-      }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-      h1 {
-        font-family: var(--serif);
-        font-size: clamp(2.4rem, 6vw, 3.6rem);
-        font-weight: 700; line-height: 1.15;
-        letter-spacing: -0.02em; color: var(--text);
-        margin-bottom: 20px;
-      }
-      h1 em {
-        font-style: italic; color: var(--accent);
-      }
-      .hero-sub {
-        font-size: 1.05rem; color: var(--text2);
-        max-width: 540px; line-height: 1.8; margin-bottom: 40px;
-      }
-      .hero-sub code {
-        background: var(--surface); border: 1px solid var(--border2);
-        padding: 2px 7px; border-radius: 6px; color: var(--accent);
-      }
-
-      .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-      .btn-primary {
-        padding: 11px 26px; background: var(--accent);
-        color: #fff; font-weight: 600; font-size: 0.9rem;
-        border-radius: var(--radius); text-decoration: none;
-        box-shadow: 0 2px 12px var(--accent-shadow);
-        transition: all 0.25s;
-      }
-      .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); text-decoration: none; }
-      .btn-outline {
-        padding: 11px 26px; border: 1px solid var(--border2);
-        color: var(--text2); font-size: 0.9rem; font-weight: 500;
-        border-radius: var(--radius); text-decoration: none;
-        transition: all 0.25s;
-      }
-      .btn-outline:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-
-      /* ── Section divider ────────────────────────────────── */
-      .section-divider {
-        text-align: center; padding: 14px 0;
-        color: var(--text3); opacity: 0.3;
-        border-top: 1px solid var(--border);
-      }
-
-      /* ── Terminal ───────────────────────────────────────── */
-      .terminal {
-        background: var(--term-bg);
-        border-radius: var(--radius-lg);
-        overflow: hidden; margin-bottom: 36px;
-        box-shadow: var(--shadow-lg);
-      }
-      .term-header {
-        display: flex; align-items: center; gap: 7px;
-        padding: 12px 16px; background: var(--term-bar);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-      }
-      .dot {
-        width: 10px; height: 10px; border-radius: 50%;
-        background: var(--term-prompt); opacity: 0.5;
-      }
-      .term-title { margin-left: 8px; font-family: var(--mono); font-size: 0.72rem; color: rgba(255,255,255,0.2); }
-      .term-body {
-        padding: 20px 24px; font-family: var(--mono);
-        font-size: 0.82rem; line-height: 1.85;
-        overflow-x: auto; color: #c4ccd4;
-      }
-      .t-comment { color: rgba(255,255,255,0.2); }
-      .t-prompt  { color: var(--term-prompt); user-select: none; }
-      .t-json    { color: rgba(255,255,255,0.3); }
-
-      /* ── Section labels ─────────────────────────────────── */
-      .section-label {
-        font-size: 0.78rem; font-weight: 600;
-        letter-spacing: 0.04em; color: var(--accent);
-        margin-bottom: 4px;
-      }
-      h2 {
-        font-family: var(--serif);
-        font-size: clamp(1.4rem, 3vw, 1.8rem);
-        font-weight: 600; letter-spacing: -0.01em;
-        color: var(--text); margin-bottom: 40px; line-height: 1.3;
-      }
-
-      /* ── How / Why ──────────────────────────────────────── */
-      .how { padding: 72px 0; border-top: 1px solid var(--border); }
-      .why-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 14px; margin-bottom: 48px;
-      }
-      .why-card {
-        padding: 24px; border-radius: var(--radius-lg);
-        border: 1px solid var(--border);
-        background: var(--surface); box-shadow: var(--shadow-sm);
-        transition: box-shadow 0.2s;
-      }
-      .why-card:hover { box-shadow: var(--shadow); }
-      .why-card.good { border-color: var(--good-border); background: var(--accent-bg); }
-      .why-icon { font-size: 1.1rem; margin-bottom: 12px; color: var(--text3); }
-      .why-icon.check { color: var(--accent); }
-      .why-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
-      .why-card p { font-size: 0.86rem; color: var(--text2); line-height: 1.65; }
-
-      .steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
-      .step {
-        display: flex; gap: 14px; align-items: flex-start;
-        flex: 1; min-width: 200px; padding: 22px;
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
-      }
-      .step-num {
-        flex-shrink: 0; width: 30px; height: 30px;
-        display: flex; align-items: center; justify-content: center;
-        background: var(--accent-bg); border-radius: 50%;
-        font-size: 0.82rem; font-weight: 700; color: var(--accent);
-        font-family: var(--mono);
-      }
-      .step strong { font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px; }
-      .step p { font-size: 0.84rem; color: var(--text2); line-height: 1.55; }
-      .step code { background: var(--bg2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; color: var(--accent); font-size: 0.8rem; }
-      .step-line { width: 20px; height: 2px; background: var(--border2); flex-shrink: 0; }
-
-      /* ── Packages ───────────────────────────────────────── */
-      .packages { padding: 72px 0; border-top: 1px solid var(--border); }
-      .pkg-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-lg); padding: 28px;
-        margin-bottom: 40px; box-shadow: var(--shadow-sm);
-      }
-      .pkg-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
-      .pkg-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-      .pkg-meta h3 { font-family: var(--mono); font-size: 1rem; font-weight: 500; }
-      .pkg-ver { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); background: var(--bg2); padding: 2px 9px; border-radius: 100px; }
-      .pkg-badge { font-size: 0.7rem; font-weight: 600; padding: 2px 10px; border-radius: 100px; background: var(--accent-bg); color: var(--accent); }
-      .pkg-desc { font-size: 0.9rem; color: var(--text2); max-width: 560px; line-height: 1.65; margin-bottom: 20px; }
-      .pkg-links { display: flex; gap: 10px; }
-      .pkg-links a {
-        font-size: 0.82rem; color: var(--text2); font-weight: 500;
-        padding: 5px 14px; border: 1px solid var(--border);
-        border-radius: var(--radius); text-decoration: none;
-        transition: all 0.2s;
-      }
-      .pkg-links a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-
-      .pkg-install {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 14px 18px; background: var(--bg2);
-        border: 1px solid var(--border); border-radius: var(--radius);
-        gap: 12px; margin-bottom: 18px;
-      }
-      .pkg-install code { color: var(--text); font-size: 0.85rem; }
-      .copy-btn {
-        background: var(--surface); border: 1px solid var(--border2);
-        color: var(--text2); font-family: var(--sans); font-size: 0.78rem;
-        font-weight: 500; padding: 5px 14px; border-radius: 8px;
-        cursor: pointer; transition: all 0.2s;
-      }
-      .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-      .pkg-commands { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-      .cmd-label { font-size: 0.78rem; color: var(--text3); font-weight: 500; flex-shrink: 0; }
-      .cmd-list { display: flex; gap: 6px; flex-wrap: wrap; }
-      .cmd-chip {
-        font-family: var(--mono); font-size: 0.74rem;
-        background: var(--accent-bg); color: var(--accent);
-        padding: 3px 10px; border-radius: 6px; font-weight: 500;
-      }
-
-      .pkg-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-      .tag { font-size: 0.72rem; color: var(--text3); font-weight: 500; background: var(--bg2); padding: 3px 10px; border-radius: 100px; }
-
-      /* ── Coming soon ────────────────────────────────────── */
-      .coming-soon h3 { font-size: 0.85rem; font-weight: 600; color: var(--text3); margin-bottom: 14px; }
-      .soon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-      .soon-card {
-        padding: 20px; background: var(--surface);
-        border: 1px dashed var(--border2); border-radius: var(--radius-lg); opacity: 0.55;
-      }
-      .soon-card code { display: block; font-size: 0.85rem; color: var(--text2); margin-bottom: 8px; font-weight: 500; }
-      .soon-card p { font-size: 0.82rem; color: var(--text3); line-height: 1.5; }
-
-      /* ── Discovery ──────────────────────────────────────── */
-      .discovery {
-        padding: 72px 0; border-top: 1px solid var(--border);
-        background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
-      }
-      .disco-sub { font-size: 1rem; color: var(--text2); max-width: 520px; margin-bottom: 40px; line-height: 1.75; }
-      .disco-sub em { font-style: normal; color: var(--text); font-weight: 600; }
-
-      .disco-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 14px; margin-bottom: 40px;
-      }
-      .disco-card {
-        padding: 22px; background: var(--surface);
-        border: 1px solid var(--border); border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-sm); transition: box-shadow 0.2s;
-      }
-      .disco-card:hover { box-shadow: var(--shadow); }
-      .disco-card h4 { font-size: 0.88rem; font-weight: 600; margin-bottom: 8px; }
-      .disco-card h4 a { color: var(--text); text-decoration: none; }
-      .disco-card h4 a:hover { color: var(--accent); text-decoration: none; }
-      .disco-card p { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
-
-      /* ── Footer ─────────────────────────────────────────── */
-      footer { border-top: 1px solid var(--border); padding: 44px 0; }
-      .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
-      .footer-left { display: flex; flex-direction: column; gap: 8px; }
-      .footer-logo {
-        display: flex; align-items: center; gap: 8px;
-        color: var(--text3); text-decoration: none;
-      }
-      .footer-logo:hover { text-decoration: none; color: var(--text2); }
-      .footer-logo .wordmark { font-size: 0.85rem; color: var(--text3); }
-      .footer-logo .wm-accent { color: var(--accent); opacity: 0.6; }
-      .footer-left p { font-size: 0.82rem; color: var(--text3); }
-      .footer-links { display: flex; gap: 24px; }
-      .footer-links a { font-size: 0.82rem; color: var(--text3); font-weight: 500; text-decoration: none; transition: color 0.2s; }
-      .footer-links a:hover { color: var(--text2); text-decoration: none; }
-
-      /* ── Mobile ─────────────────────────────────────────── */
-      @media (max-width: 600px) {
-        .nav-links { gap: 16px; }
-        .nav-links a:nth-child(3) { display: none; }
-        h1 { font-size: 2.2rem; }
-        .steps { flex-direction: column; }
-        .step-line { width: 2px; height: 14px; margin: 0 auto; }
-        .footer-inner { flex-direction: column; align-items: flex-start; }
-        .hero-logo { font-size: 2.4rem; }
-      }
-    </style>
-  </body>
-</html>
+  .hero-meta {
+    font-size: 0.82rem;
+    color: var(--muted-foreground);
+  }
+</style>
