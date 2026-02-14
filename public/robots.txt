@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# AI crawlers — you're welcome here
+User-agent: GPTBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Key machine-readable resources for AI agents:
+# https://harness.gg/llms.txt      — LLM discovery index
+# https://harness.gg/packages.json — Structured package registry
+
+Sitemap: https://harness.gg/sitemap-index.xml

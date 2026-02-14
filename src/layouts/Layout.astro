@@ -1,0 +1,95 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Harness.gg — CLI Tools for AI Agents',
+  description = 'Open-source CLI packages that give AI agents the ability to interact with any app. No MCPs, no servers. Just install and run.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+
+    <!-- AI agent discovery -->
+    <meta name="ai-tools" content="harness.gg" />
+    <meta name="robots" content="index, follow, max-snippet:-1" />
+    <link rel="canonical" href="https://harness.gg" />
+
+    <!-- LLM / agent discovery -->
+    <link rel="alternate" type="application/json" href="/packages.json" title="Harness package registry" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM discovery index" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://harness.gg" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="Harness.gg" />
+
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg:        #080c14;
+        --surface:   #0d1117;
+        --surface-1: #161b22;
+        --surface-2: #1c2230;
+        --border:    #21262d;
+        --border-1:  #30363d;
+
+        --text:      #e6edf3;
+        --text-2:    #8b949e;
+        --text-3:    #484f58;
+
+        --blue:      #58a6ff;
+        --blue-dim:  rgba(88, 166, 255, 0.12);
+        --blue-glow: rgba(88, 166, 255, 0.06);
+        --green:     #3fb950;
+        --green-dim: rgba(63, 185, 80, 0.12);
+        --orange:    #d29922;
+        --purple:    #a371f7;
+
+        --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+        --radius: 6px;
+        --radius-lg: 10px;
+      }
+
+      html {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        scroll-behavior: smooth;
+      }
+
+      body { min-height: 100vh; }
+
+      a { color: var(--blue); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      code, kbd, pre {
+        font-family: var(--mono);
+        font-size: 0.875em;
+      }
+
+      ::selection { background: var(--blue-dim); }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
