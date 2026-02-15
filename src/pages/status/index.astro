@@ -1,0 +1,54 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { resolvePackageCatalog } from '@/lib/package-catalog';
+
+const packages = await resolvePackageCatalog();
+---
+
+<Layout title="Package Status | Harness.gg" description="Current publish status and versions for Harness packages.">
+  <section class="wrap">
+    <h1>Package status</h1>
+    <p class="intro">Single source status matrix for all Harness packages.</p>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Version</th>
+          <th>Install</th>
+          <th>Docs</th>
+          <th>Repo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {packages.map((pkg) => (
+          <tr>
+            <td><code>{pkg.key}</code></td>
+            <td><code>{pkg.name}</code></td>
+            <td>{pkg.status}</td>
+            <td>{pkg.version ? `v${pkg.version}` : '-'}</td>
+            <td><code>{pkg.install}</code></td>
+            <td><a href={pkg.links.docs} target="_blank" rel="noopener">docs</a></td>
+            <td><a href={pkg.links.github} target="_blank" rel="noopener">github</a></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</Layout>
+
+<style>
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 24px 64px; }
+  h1 { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 1.8rem; margin-bottom: 8px; color: var(--foreground); }
+  .intro { color: var(--muted-foreground); margin-bottom: 18px; }
+  .matrix { width: 100%; border-collapse: collapse; font-size: 0.87rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 10px 12px; vertical-align: top; }
+  th { color: var(--muted-foreground); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  @media (max-width: 900px) {
+    .matrix { display: block; overflow-x: auto; white-space: nowrap; }
+  }
+</style>

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 
 const commands = [
   { pkg: 'npm', cmd: 'npm install -D @harnessgg/electron' },
-  { pkg: 'pip', cmd: 'pip install harness-kdenlive' },
+  { pkg: 'pip', cmd: 'pip install harnessgg-kdenlive' },
+  { pkg: 'pip', cmd: 'pip install harnessgg-blender' },
+  { pkg: 'pip', cmd: 'pip install harnessgg-gimp' },
 ];
 
 export function InstallCycler() {

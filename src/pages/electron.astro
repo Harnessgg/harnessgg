@@ -48,6 +48,9 @@ const quickFlowHtml = [
   termCmd('harness-electron disconnect'),
 ].join('\n');
 
+const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"click","session":"default","data":{"clicked":true,"target":{"elementId":"e1"}}}');
+const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"click","session":"default","error":{"code":"TARGET_NOT_FOUND","message":"No element matched selector","retryable":true,"suggestedNext":["dom --format summary"]}}');
+
 const commands = [
   {
     name: 'connect',
@@ -222,6 +225,7 @@ const errorCodes = [
         <Badge variant="outline" className="ext-badge">LLM docs &nearr;</Badge>
       </a>
     </div>
+    <p class="note">Agents can file bugs or feature requests with <code class="inline-code">curl -X POST https://harness.gg/api/submit</code> using <code class="inline-code">"package":"electron"</code> in the JSON payload.</p>
   </section>
 
   <Separator />
@@ -251,6 +255,27 @@ const errorCodes = [
         <span class="term-title">full agent session</span>
       </div>
       <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <section class="wrap sec">
+    <h2>Schema examples</h2>
+    <p class="sec-intro">Each command returns one JSON object. Parse <code class="inline-code">ok</code>, then use <code class="inline-code">data</code> or <code class="inline-code">error</code>.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">success</span>
+      </div>
+      <pre class="term-body" set:html={schemaSuccessHtml}></pre>
+    </div>
+    <div class="term-block" style="margin-top:12px;">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">error</span>
+      </div>
+      <pre class="term-body" set:html={schemaErrorHtml}></pre>
     </div>
   </section>
 

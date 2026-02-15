@@ -3,50 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { InstallCycler } from '@/components/InstallCycler';
-import { getNpmVersion, getPypiVersion } from '@/lib/versions';
+import { resolvePackageCatalog } from '@/lib/package-catalog';
 
-const [electronVersion, kdenliveVersion] = await Promise.all([
-  getNpmVersion('@harnessgg/electron', '0.1.0'),
-  getPypiVersion('harness-kdenlive', '0.3.0'),
-]);
-
-const packages = [
-  {
-    name: '@harnessgg/electron',
-    version: electronVersion,
-    description: 'Interact with any Electron app via Chrome DevTools Protocol. Click, type, screenshot, assert. Structured JSON output.',
-    href: '/electron',
-    status: 'published',
-  },
-  {
-    name: 'harness-kdenlive',
-    version: kdenliveVersion,
-    description: 'Harness the Kdenlive video editor. Create projects, edit timelines, apply effects, and render. Structured JSON output.',
-    href: '/kdenlive',
-    status: 'published',
-  },
-  {
-    name: '@harnessgg/web',
-    version: null,
-    description: 'Harness web browsers for AI agents. Automate tabs, navigation, DOM interaction, and screenshots via a CLI with structured JSON output.',
-    href: null,
-    status: 'soon',
-  },
-  {
-    name: 'harnessgg-blender',
-    version: null,
-    description: 'Harness the Blender 3D suite. Script scenes, objects, materials, and renders from the CLI with structured JSON output.',
-    href: null,
-    status: 'soon',
-  },
-  {
-    name: 'harnessgg-gimp',
-    version: null,
-    description: 'Harness GIMP for image editing. Apply filters, adjustments, and exports programmatically with structured JSON output.',
-    href: null,
-    status: 'soon',
-  },
-];
+const packages = await resolvePackageCatalog();
 ---
 
 <Layout title="Harness.gg: CLI Tools for AI Agents">
@@ -78,9 +37,9 @@ const packages = [
     <ul class="divide-y divide-border">
       {packages.map(pkg => (
         <li>
-          {pkg.href ? (
+          {pkg.status === 'published' ? (
             <a
-              href={pkg.href}
+              href={pkg.route}
               class="group flex items-center justify-between gap-6 py-5 no-underline hover:no-underline"
             >
               <div class="flex flex-col gap-1.5 min-w-0">

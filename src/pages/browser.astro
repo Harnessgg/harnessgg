@@ -1,0 +1,949 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CopyButton } from '@/components/CopyButton';
+import { getNpmVersion } from '@/lib/versions';
+
+const version = await getNpmVersion('@harnessgg/browser', '0.1.0');
+const install = 'npm install -D @harnessgg/browser';
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const termCmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const quickFlowHtml = [
+  comment('# 1. Connect to a URL'),
+  termCmd('harness-browser connect --url https://example.com'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"connect","session":"default","data":{"url":"https://example.com"}}'),
+  nl,
+  comment('# 2. Inspect the DOM'),
+  termCmd('harness-browser dom --format summary'),
+  json('{"ok":true,"session":"default","data":{"title":"Example","buttons":3,"inputs":1}}'),
+  nl,
+  comment('# 3. Find elements'),
+  termCmd('harness-browser query --role button --name "Sign in"'),
+  json('{"ok":true,"session":"default","data":{"count":1,"elements":[{"elementId":"e1","tag":"button","visible":true}]}}'),
+  nl,
+  comment('# 4. Interact'),
+  termCmd('harness-browser type --css "input[type=email]" --value "user@example.com"'),
+  termCmd('harness-browser click --element-id e1'),
+  nl,
+  comment('# 5. Assert and capture'),
+  termCmd('harness-browser assert --kind url --expected "/dashboard"'),
+  termCmd('harness-browser screenshot --path ./shot.png'),
+  nl,
+  comment('# 6. Clean up'),
+  termCmd('harness-browser disconnect'),
+].join('\n');
+
+const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"query","session":"default","data":{"count":1,"elements":[{"elementId":"e1","role":"button","name":"Sign in"}]}}');
+const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"click","session":"default","error":{"code":"TARGET_NOT_FOUND","message":"No element matched selector","retryable":false}}');
+
+type Flag = { flag: string; req: boolean; desc: string };
+type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
+
+const sessionCommands: Command[] = [
+  {
+    name: 'connect',
+    synopsis: 'harness-browser connect --url <url> [--session <id>]',
+    description: 'Launch a Playwright browser and navigate to the given URL. Returns the session ID used in all subsequent commands.',
+    flags: [
+      { flag: '--url',     req: true,  desc: 'Initial URL to open' },
+      { flag: '--session', req: false, desc: 'Session ID (default: "default")' },
+    ],
+  },
+  {
+    name: 'disconnect',
+    synopsis: 'harness-browser disconnect [--session <id>]',
+    description: 'Close the session and release the browser. Pass --session to target a specific session.',
+    flags: [
+      { flag: '--session', req: false, desc: 'Session ID (default: "default")' },
+    ],
+  },
+  {
+    name: 'sessions list',
+    synopsis: 'harness-browser sessions list',
+    description: 'List all saved sessions with their URLs and element maps.',
+    flags: [],
+  },
+  {
+    name: 'sessions prune',
+    synopsis: 'harness-browser sessions prune [--session <id>]',
+    description: 'Remove one or all stale sessions.',
+    flags: [
+      { flag: '--session', req: false, desc: 'Specific session to prune (default: all)' },
+    ],
+  },
+  {
+    name: 'schema',
+    synopsis: 'harness-browser schema',
+    description: 'Return a machine-readable command and flag schema. Good first call for an agent to understand available capabilities.',
+    flags: [],
+  },
+  {
+    name: 'capabilities',
+    synopsis: 'harness-browser capabilities',
+    description: 'List all commands, selector strategies, assertion kinds, and defaults.',
+    flags: [],
+  },
+  {
+    name: 'version',
+    synopsis: 'harness-browser version',
+    description: 'Return package name, version, and protocol version.',
+    flags: [],
+  },
+];
+
+const navigationCommands: Command[] = [
+  {
+    name: 'navigate',
+    synopsis: 'harness-browser navigate --url <url> [--timeout <ms>] [--session <id>]',
+    description: 'Navigate the active page to a URL. Waits for the load event before returning.',
+    flags: [
+      { flag: '--url',     req: true,  desc: 'Destination URL' },
+      { flag: '--timeout', req: false, desc: 'Navigation timeout in ms (default: 30000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'back',
+    synopsis: 'harness-browser back [--timeout <ms>] [--session <id>]',
+    description: 'Go back one step in browser history.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 15000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'forward',
+    synopsis: 'harness-browser forward [--timeout <ms>] [--session <id>]',
+    description: 'Go forward one step in browser history.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 15000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'reload',
+    synopsis: 'harness-browser reload [--timeout <ms>] [--session <id>]',
+    description: 'Reload the current page.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 30000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const domCommands: Command[] = [
+  {
+    name: 'dom',
+    synopsis: 'harness-browser dom [--format summary|tree|html] [--max-nodes <n>] [--session <id>]',
+    description: 'Inspect the page DOM. Use summary to discover interactive elements before clicking. Use tree or html for structural analysis.',
+    flags: [
+      { flag: '--format',    req: false, desc: 'summary | tree | html (default: summary)' },
+      { flag: '--max-nodes', req: false, desc: 'Max nodes for tree format (default: 300)' },
+      { flag: '--session',   req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'query',
+    synopsis: 'harness-browser query [--css|--xpath|--text|--role|--testid] <value> [--name <s>] [--limit <n>] [--visible-only] [--session <id>]',
+    description: 'Find elements and return stable element IDs (e.g. e1, e2). Use --element-id in subsequent commands to reference them without re-querying.',
+    flags: [
+      { flag: '--css',          req: false, desc: 'CSS selector' },
+      { flag: '--xpath',        req: false, desc: 'XPath expression' },
+      { flag: '--text',         req: false, desc: 'Visible text content' },
+      { flag: '--role',         req: false, desc: 'ARIA role (combine with --name)' },
+      { flag: '--testid',       req: false, desc: 'data-testid value' },
+      { flag: '--name',         req: false, desc: 'Accessible name filter (only with --role)' },
+      { flag: '--limit',        req: false, desc: 'Max matches to return (default: 10)' },
+      { flag: '--visible-only', req: false, desc: 'Return only visible elements' },
+      { flag: '--session',      req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'aria',
+    synopsis: 'harness-browser aria [--session <id>]',
+    description: 'Dump the full accessibility tree. Useful for finding ARIA roles and labels when dom --format summary is insufficient.',
+    flags: [
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const interactionCommands: Command[] = [
+  {
+    name: 'click',
+    synopsis: 'harness-browser click <selector> [--index <n>] [--strict-single] [--timeout <ms>] [--session <id>]',
+    description: 'Click an element. Selector flags: --css, --xpath, --text, --role (+--name), --testid, --element-id.',
+    flags: [
+      { flag: '--css / --xpath / --text / --role / --testid', req: false, desc: 'Selector (one required)' },
+      { flag: '--element-id', req: false, desc: 'Element ID from query (alternative to selector)' },
+      { flag: '--name',        req: false, desc: 'Accessible name (with --role only)' },
+      { flag: '--index',       req: false, desc: '0-based match index (default: 0)' },
+      { flag: '--strict-single', req: false, desc: 'Fail if more than one match' },
+      { flag: '--timeout',     req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session',     req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'type',
+    synopsis: 'harness-browser type <selector> --value <text> [--clear] [--timeout <ms>] [--session <id>]',
+    description: 'Type text into an input element. Pass --clear to empty the field first.',
+    flags: [
+      { flag: '--value',   req: true,  desc: 'Text to type' },
+      { flag: '--clear',   req: false, desc: 'Clear existing value before typing' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'press',
+    synopsis: 'harness-browser press --key <key> [<selector>] [--timeout <ms>] [--session <id>]',
+    description: 'Press a keyboard key on the page or a specific element. Examples: Enter, Tab, Escape, Control+A, ArrowDown.',
+    flags: [
+      { flag: '--key',     req: true,  desc: 'Key name (e.g. Enter, Tab, Control+A)' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'hover',
+    synopsis: 'harness-browser hover <selector> [--timeout <ms>] [--session <id>]',
+    description: 'Move the pointer over an element to trigger hover states or reveal tooltips.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'select',
+    synopsis: 'harness-browser select <selector> --value <value> [--timeout <ms>] [--session <id>]',
+    description: 'Choose an option in a select element by its value attribute.',
+    flags: [
+      { flag: '--value',   req: true,  desc: 'Option value to select' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'check',
+    synopsis: 'harness-browser check <selector> [--timeout <ms>] [--session <id>]',
+    description: 'Check a checkbox or radio input.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'uncheck',
+    synopsis: 'harness-browser uncheck <selector> [--timeout <ms>] [--session <id>]',
+    description: 'Uncheck a checkbox input.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'scroll',
+    synopsis: 'harness-browser scroll --direction up|down|to [<selector>] [--amount <n>] [--timeout <ms>] [--session <id>]',
+    description: 'Scroll the page or to a specific element. Use --direction to to scroll an element into view.',
+    flags: [
+      { flag: '--direction', req: true,  desc: 'up | down | to' },
+      { flag: '--amount',    req: false, desc: 'Scroll delta in px for up/down (default: 600)' },
+      { flag: '--timeout',   req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session',   req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'upload',
+    synopsis: 'harness-browser upload <selector> --file <path> [--timeout <ms>] [--session <id>]',
+    description: 'Set a file on a file input element.',
+    flags: [
+      { flag: '--file',    req: true,  desc: 'Path to the file to upload' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'drag',
+    synopsis: 'harness-browser drag <source-selector> [--to-css|--to-role|...] [--to-x <n>] [--to-y <n>] [--timeout <ms>] [--session <id>]',
+    description: 'Drag from a source element to a destination element or coordinates.',
+    flags: [
+      { flag: '--to-css / --to-xpath / --to-text / --to-role / --to-testid', req: false, desc: 'Destination selector (one required)' },
+      { flag: '--to-x / --to-y', req: false, desc: 'Destination coordinates (alternative to selector)' },
+      { flag: '--timeout',       req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session',       req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'download',
+    synopsis: 'harness-browser download --path <file> [<trigger-selector>] [--timeout <ms>] [--session <id>]',
+    description: 'Wait for a download and save it. Optionally click a trigger element to start the download.',
+    flags: [
+      { flag: '--path',    req: true,  desc: 'Destination file path for the download' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 30000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const waitAssertCommands: Command[] = [
+  {
+    name: 'wait',
+    synopsis: 'harness-browser wait --kind visible|hidden|url|text [<selector>] [--value <s>] [--timeout <ms>] [--session <id>]',
+    description: 'Pause until a condition is met. visible/hidden require a selector. url/text require --value. url forbids a selector.',
+    flags: [
+      { flag: '--kind',    req: true,  desc: 'visible | hidden | url | text' },
+      { flag: '--value',   req: false, desc: 'Expected URL substring or text content (url and text kinds)' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'assert',
+    synopsis: 'harness-browser assert --kind <kind> [<selector>] [--expected <s>] [--timeout <ms>] [--session <id>]',
+    description: 'Assert a page or element condition. Returns ok:false with ASSERT_FAIL on failure.',
+    flags: [
+      { flag: '--kind',     req: true,  desc: 'exists | visible | not-visible | not-exists | enabled | checked | text | value | url | title | count | attribute' },
+      { flag: '--expected', req: false, desc: 'Expected value (text, url, title, count, attribute, value kinds)' },
+      { flag: '--attribute',req: false, desc: 'Attribute name (attribute kind only)' },
+      { flag: '--timeout',  req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session',  req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'screenshot',
+    synopsis: 'harness-browser screenshot --path <file> [--full-page] [<selector>] [--timeout <ms>] [--session <id>]',
+    description: 'Capture a screenshot. No selector = viewport. --full-page = full document. With selector = element only. Cannot combine --full-page with a selector.',
+    flags: [
+      { flag: '--path',      req: true,  desc: 'Output file path (.png or .jpg)' },
+      { flag: '--full-page', req: false, desc: 'Full-page screenshot (cannot use with selector)' },
+      { flag: '--timeout',   req: false, desc: 'Timeout in ms (default: 15000)' },
+      { flag: '--session',   req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'evaluate',
+    synopsis: 'harness-browser evaluate --script <js> [--session <id>]',
+    description: 'Run JavaScript in the page context. Returns the result as JSON.',
+    flags: [
+      { flag: '--script',  req: true,  desc: 'JS expression (e.g. document.title)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const diagnosticCommands: Command[] = [
+  {
+    name: 'state',
+    synopsis: 'harness-browser state <selector> [--timeout <ms>] [--session <id>]',
+    description: 'Read an element\'s state: disabled, checked, value, and all attributes. Useful before asserting.',
+    flags: [
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 5000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'console',
+    synopsis: 'harness-browser console [--no-clear] [--session <id>]',
+    description: 'Read buffered console messages (logs, warnings, errors) captured since the last call. Clears the buffer by default.',
+    flags: [
+      { flag: '--no-clear', req: false, desc: 'Keep the buffer after reading' },
+      { flag: '--session',  req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'network',
+    synopsis: 'harness-browser network [--filter <pattern>] [--no-clear] [--session <id>]',
+    description: 'Read buffered network requests and responses. Filter by URL substring.',
+    flags: [
+      { flag: '--filter',   req: false, desc: 'URL substring to filter events' },
+      { flag: '--no-clear', req: false, desc: 'Keep the buffer after reading' },
+      { flag: '--session',  req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'cookies',
+    synopsis: 'harness-browser cookies [--name <s>] [--session <id>]',
+    description: 'List browser cookies for the current page context.',
+    flags: [
+      { flag: '--name',    req: false, desc: 'Filter by cookie name' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'storage',
+    synopsis: 'harness-browser storage --kind local|session [--session <id>]',
+    description: 'Read localStorage or sessionStorage as a key-value map.',
+    flags: [
+      { flag: '--kind',    req: true,  desc: 'local | session' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const tabsFramesMockCommands: Command[] = [
+  {
+    name: 'tabs list',
+    synopsis: 'harness-browser tabs list [--session <id>]',
+    description: 'List all open tabs with their index, URL, and title.',
+    flags: [{ flag: '--session', req: false, desc: 'Session ID' }],
+  },
+  {
+    name: 'tabs new',
+    synopsis: 'harness-browser tabs new [--url <url>] [--timeout <ms>] [--session <id>]',
+    description: 'Open a new tab. The new tab becomes active for the session.',
+    flags: [
+      { flag: '--url',     req: false, desc: 'URL to open in the new tab' },
+      { flag: '--timeout', req: false, desc: 'Timeout in ms (default: 30000)' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'tabs switch',
+    synopsis: 'harness-browser tabs switch [--index <n>] [--url-contains <s>] [--title-contains <s>] [--session <id>]',
+    description: 'Switch to a tab by index, URL substring, or title substring.',
+    flags: [
+      { flag: '--index',          req: false, desc: '0-based tab index' },
+      { flag: '--url-contains',   req: false, desc: 'URL substring match' },
+      { flag: '--title-contains', req: false, desc: 'Title substring match' },
+      { flag: '--session',        req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'tabs close',
+    synopsis: 'harness-browser tabs close --index <n> [--session <id>]',
+    description: 'Close a tab by index.',
+    flags: [
+      { flag: '--index',   req: true,  desc: '0-based tab index to close' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'mock add',
+    synopsis: 'harness-browser mock add --match <pattern> --status <code> --body <json> [--method <s>] [--session <id>]',
+    description: 'Intercept fetch requests whose URL contains the match pattern and return a mock response.',
+    flags: [
+      { flag: '--match',   req: true,  desc: 'URL substring to intercept' },
+      { flag: '--status',  req: true,  desc: 'HTTP status code to return' },
+      { flag: '--body',    req: true,  desc: 'JSON response body' },
+      { flag: '--method',  req: false, desc: 'Restrict to a specific HTTP method' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'mock list',
+    synopsis: 'harness-browser mock list [--session <id>]',
+    description: 'List all active mock rules.',
+    flags: [{ flag: '--session', req: false, desc: 'Session ID' }],
+  },
+  {
+    name: 'mock clear',
+    synopsis: 'harness-browser mock clear [--session <id>]',
+    description: 'Remove all mock rules.',
+    flags: [{ flag: '--session', req: false, desc: 'Session ID' }],
+  },
+  {
+    name: 'auth export',
+    synopsis: 'harness-browser auth export --kind cookies|storage --path <file> [--session <id>]',
+    description: 'Export cookies or localStorage to a JSON file for later import.',
+    flags: [
+      { flag: '--kind',    req: true,  desc: 'cookies | storage' },
+      { flag: '--path',    req: true,  desc: 'Output file path' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+  {
+    name: 'auth import',
+    synopsis: 'harness-browser auth import --kind cookies|storage --path <file> [--session <id>]',
+    description: 'Import cookies or localStorage from a previously exported JSON file.',
+    flags: [
+      { flag: '--kind',    req: true,  desc: 'cookies | storage' },
+      { flag: '--path',    req: true,  desc: 'Source file path' },
+      { flag: '--session', req: false, desc: 'Session ID' },
+    ],
+  },
+];
+
+const errorCodes = [
+  { code: 'INVALID_INPUT',    exit: 10, retryable: false, desc: 'Bad or missing arguments. Check flag syntax; run schema to verify.' },
+  { code: 'CONNECT_FAILED',   exit: 20, retryable: true,  desc: 'Could not launch or attach. Retry once.' },
+  { code: 'NAV_FAILED',       exit: 21, retryable: true,  desc: 'Navigation timed out or failed. Check URL; retry.' },
+  { code: 'TARGET_NOT_FOUND', exit: 20, retryable: false, desc: 'Selector matched nothing. Run dom --format summary to discover elements.' },
+  { code: 'INVALID_SELECTOR', exit: 30, retryable: false, desc: 'Malformed selector. Fix the flag value.' },
+  { code: 'ACTION_FAILED',    exit: 30, retryable: false, desc: 'Action ran but failed. Check element state.' },
+  { code: 'TIMEOUT',          exit: 40, retryable: true,  desc: 'Condition not met within timeout. Increase --timeout or check page state.' },
+  { code: 'ASSERT_FAIL',      exit: 50, retryable: false, desc: 'Assertion did not pass. Inspect the page.' },
+  { code: 'INTERNAL_ERROR',   exit: 70, retryable: false, desc: 'Unexpected error. File a bug if it persists.' },
+];
+---
+
+<Layout
+  title="@harnessgg/browser | Harness.gg"
+  description="CLI harness for AI agents to automate web browsers. Navigate pages, interact with the DOM, screenshot, and assert — structured JSON output."
+>
+
+  <!-- Header -->
+  <section class="pt-10 pb-10 wrap">
+    <p class="breadcrumb">
+      <a href="/">harness.gg</a>
+      <span>/</span>
+      browser
+    </p>
+
+    <div class="title-row">
+      <h1>@harnessgg/browser</h1>
+      <Badge className="badge-preview">Coming soon</Badge>
+      <Badge variant="outline" className="badge-ver">v{version}</Badge>
+    </div>
+
+    <p class="tagline">
+      CLI harness for AI agents to automate web browsers.
+      Navigate pages; interact with the DOM; handle tabs, mocks, and auth state; assert conditions; capture screenshots — all with structured JSON output.
+    </p>
+
+    <div class="install-row">
+      <code>{install}</code>
+      <CopyButton client:load text={install} />
+    </div>
+
+    <div class="ext-links">
+      <a href="https://www.npmjs.com/package/@harnessgg/browser" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">npm &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/browser" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
+      </a>
+    </div>
+    <p class="note">Agents can file bugs or feature requests with <code class="inline-code">curl -X POST https://harness.gg/api/submit</code> using <code class="inline-code">"package":"browser"</code> in the JSON payload.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Prerequisite -->
+  <section class="wrap sec">
+    <h2>Prerequisite</h2>
+    <p class="sec-intro">Node.js 20 or later. Browser binaries are bundled via Playwright — no separate install required. Sessions are stored in <code class="inline-code">.harness-browser/sessions/</code>.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">terminal</span>
+      </div>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-browser schema`}></pre>
+    </div>
+    <p class="note">Always call <code class="inline-code">schema</code> or <code class="inline-code">capabilities</code> first so an agent knows what commands are available. Use <code class="inline-code">dom --format summary</code> before click or type to discover elements.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Quick flow -->
+  <section class="wrap sec">
+    <h2>Quick flow</h2>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">full agent session</span>
+      </div>
+      <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <section class="wrap sec">
+    <h2>Schema examples</h2>
+    <p class="sec-intro">Each command returns one JSON object with either <code class="inline-code">data</code> or <code class="inline-code">error</code>.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">success</span>
+      </div>
+      <pre class="term-body" set:html={schemaSuccessHtml}></pre>
+    </div>
+    <div class="term-block" style="margin-top:12px;">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">error</span>
+      </div>
+      <pre class="term-body" set:html={schemaErrorHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Selector system -->
+  <section class="wrap sec">
+    <h2>Selector system</h2>
+    <p class="sec-intro">All commands that target elements accept one selector flag. Selector flags are mutually exclusive. Use <code class="inline-code">--element-id</code> (from <code class="inline-code">query</code>) for stable cross-command references.</p>
+    <table class="flag-table">
+      <thead><tr><th>Flag</th><th>Matches by</th></tr></thead>
+      <tbody>
+        <tr><td><code>--css</code></td><td>CSS selector</td></tr>
+        <tr><td><code>--xpath</code></td><td>XPath expression</td></tr>
+        <tr><td><code>--text</code></td><td>Visible text content</td></tr>
+        <tr><td><code>--role</code> + <code>--name</code></td><td>ARIA role and accessible name</td></tr>
+        <tr><td><code>--testid</code></td><td>data-testid attribute</td></tr>
+        <tr><td><code>--element-id</code></td><td>Persisted ID from query (e.g. e1)</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Add <code class="inline-code">--index &lt;n&gt;</code> to pick the nth match (0-based). Add <code class="inline-code">--strict-single</code> to error if more than one element matches. Cannot combine these with <code class="inline-code">--element-id</code>.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Session / meta commands -->
+  <section class="wrap sec" id="session">
+    <h2>Session commands</h2>
+    <div class="cmd-list">
+      {sessionCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Navigation -->
+  <section class="wrap sec" id="navigation">
+    <h2>Navigation commands</h2>
+    <div class="cmd-list">
+      {navigationCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- DOM -->
+  <section class="wrap sec" id="dom">
+    <h2>DOM and discovery commands</h2>
+    <div class="cmd-list">
+      {domCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Interaction -->
+  <section class="wrap sec" id="interaction">
+    <h2>Interaction commands</h2>
+    <div class="cmd-list">
+      {interactionCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Wait / assert / screenshot -->
+  <section class="wrap sec" id="assert">
+    <h2>Wait, assert, and capture</h2>
+    <div class="cmd-list">
+      {waitAssertCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Diagnostics -->
+  <section class="wrap sec" id="diagnostics">
+    <h2>Diagnostic commands</h2>
+    <p class="sec-intro">Use these to inspect page state, console output, network traffic, cookies, and storage without modifying anything.</p>
+    <div class="cmd-list">
+      {diagnosticCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Tabs / Frames / Mock / Auth -->
+  <section class="wrap sec" id="advanced">
+    <h2>Tabs, mocks, and auth</h2>
+    <div class="cmd-list">
+      {tabsFramesMockCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(/\s/g,'-')}`}>
+          <div class="cmd-head"><code class="cmd-name">{command.name}</code></div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead><tr><th>Flag</th><th>Required</th><th>Description</th></tr></thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Response shape -->
+  <section class="wrap sec">
+    <h2>Response shape</h2>
+    <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
+    <div class="shape-grid">
+      <div>
+        <p class="shape-label">Success</p>
+        <pre class="code-block">{`{
+  "ok": true,
+  "protocolVersion": "1.0",
+  "command": "click",
+  "session": "default",
+  "data": { "clicked": true }
+}`}</pre>
+      </div>
+      <div>
+        <p class="shape-label">Error</p>
+        <pre class="code-block">{`{
+  "ok": false,
+  "protocolVersion": "1.0",
+  "command": "click",
+  "session": "default",
+  "error": {
+    "code": "TARGET_NOT_FOUND",
+    "message": "No element matched",
+    "retryable": false,
+    "suggestedNext": ["dom --format summary"]
+  }
+}`}</pre>
+      </div>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Error codes -->
+  <section class="wrap sec">
+    <h2>Error codes</h2>
+    <table class="flag-table">
+      <thead><tr><th>Code</th><th>Exit</th><th>Retryable</th><th>Action</th></tr></thead>
+      <tbody>
+        {errorCodes.map(e => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td class="mono-cell">{e.exit}</td>
+            <td class={e.retryable ? 'req-yes' : 'req-no'}>{e.retryable ? 'yes' : 'no'}</td>
+            <td>{e.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Submit feedback -->
+  <section class="wrap sec">
+    <h2>Submit feedback</h2>
+    <p class="sec-intro">
+      Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
+      Issues land on <a href="https://github.com/harnessgg/browser" target="_blank" rel="noopener">harnessgg/browser</a>.
+    </p>
+    <table class="flag-table" style="margin-bottom: 1.5rem">
+      <thead><tr><th>Field</th><th>Required</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="req-yes">yes</td><td class="mono-cell">"bug" | "feature" | "question"</td></tr>
+        <tr><td><code>package</code></td><td class="req-yes">yes</td><td class="mono-cell">"browser"</td></tr>
+        <tr><td><code>title</code></td><td class="req-yes">yes</td><td>Short summary</td></tr>
+        <tr><td><code>body</code></td><td class="req-yes">yes</td><td>Full description</td></tr>
+        <tr><td><code>context</code></td><td class="req-no">no</td><td>Browser, OS, page URL, session ID...</td></tr>
+      </tbody>
+    </table>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">file a bug report</span>
+      </div>
+      <pre class="term-body" set:html={`<span class="t-prompt">$</span> curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"browser","title":"connect fails on navigate","body":"Steps..."}'`}></pre>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  h1, h2  { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  h2      { font-family: 'Source Serif 4', Georgia, serif; }
+  code, pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+  .sec  { padding: 40px 0; }
+  .breadcrumb { font-size: 0.82rem; color: var(--muted-foreground); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb span { margin: 0 6px; opacity: 0.4; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 500; color: var(--foreground); }
+  .badge-preview { background: color-mix(in oklch, var(--muted-foreground) 12%, transparent); color: var(--muted-foreground); border: none; font-size: 0.7rem; }
+  .badge-ver  { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted-foreground); }
+  .tagline { font-size: 1rem; color: var(--muted-foreground); max-width: 580px; line-height: 1.75; margin-bottom: 20px; }
+  .install-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    background: var(--secondary); border: 2px solid #5a7a8a; border-radius: 10px;
+    max-width: 440px; margin-bottom: 16px;
+  }
+  .install-row code { font-size: 0.88rem; color: var(--foreground); }
+  .ext-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ext-badge { font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+  .ext-badge:hover { border-color: var(--primary); color: var(--primary); }
+  h2 { font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+  .sec-intro { font-size: 0.92rem; color: var(--muted-foreground); margin-bottom: 20px; line-height: 1.7; }
+  .sec-intro a { color: var(--primary); }
+  .note { font-size: 0.82rem; color: var(--muted-foreground); margin-top: 12px; }
+  .term-block { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(30,42,52,0.12); border: 2px solid #5a7a8a; }
+  .term-bar { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: #283440; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #7a9aaa; opacity: 0.5; }
+  .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
+  .term-body { padding: 20px 24px; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; line-height: 1.85; background: #1e2830; color: #c4ccd4; white-space: pre-wrap; word-break: break-all; }
+  .t-comment { color: rgba(255,255,255,0.2); }
+  .t-prompt  { color: #7a9aaa; user-select: none; }
+  .t-json    { color: rgba(255,255,255,0.3); }
+  .cmd-list  { display: flex; flex-direction: column; gap: 16px; }
+  .cmd-card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .cmd-head  { margin-bottom: 10px; }
+  .cmd-name  { font-size: 0.95rem; font-weight: 500; color: var(--primary); }
+  .cmd-synopsis { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--muted-foreground); background: var(--secondary); padding: 9px 14px; border-radius: 8px; border: 2px solid #5a7a8a; margin-bottom: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .cmd-desc { font-size: 0.87rem; color: var(--muted-foreground); margin-bottom: 14px; line-height: 1.65; }
+  .flag-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .flag-table th { text-align: left; padding: 7px 12px; font-size: 0.73rem; font-weight: 600; letter-spacing: 0.03em; color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
+  .flag-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); vertical-align: top; line-height: 1.5; }
+  .flag-table td:first-child code { color: var(--foreground); font-size: 0.8rem; }
+  .req-yes { color: var(--primary) !important; font-size: 0.8rem; font-weight: 500; }
+  .req-no  { color: var(--muted-foreground) !important; font-size: 0.8rem; }
+  .mono-cell { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+  .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .shape-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .code-block { background: #1e2830; color: #c4ccd4; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 18px 20px; border-radius: 12px; overflow-x: auto; line-height: 1.7; border: 2px solid #5a7a8a; }
+  .inline-code { background: var(--secondary); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+  @media (max-width: 600px) { .shape-grid { grid-template-columns: 1fr; } h1 { font-size: 1.2rem; } }
+</style>

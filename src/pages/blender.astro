@@ -1,0 +1,1031 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CopyButton } from '@/components/CopyButton';
+import { getPypiVersion } from '@/lib/versions';
+
+const version = await getPypiVersion('harnessgg-blender', '0.2.0');
+const install = 'pip install harnessgg-blender';
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const termCmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const quickFlowHtml = [
+  comment('# 1. Start the bridge'),
+  termCmd('harness-blender bridge start'),
+  nl,
+  comment('# 2. Verify stability'),
+  termCmd('harness-blender bridge status'),
+  termCmd('harness-blender bridge verify --iterations 25'),
+  nl,
+  comment('# 3. Create a new project and inspect it'),
+  termCmd('harness-blender file new scene.blend --overwrite'),
+  termCmd('harness-blender file inspect scene.blend'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"file inspect","data":{"objects":[],"materials":[],"cameras":[]}}'),
+  nl,
+  comment('# 4. Add objects and a material'),
+  termCmd('harness-blender object add scene.blend CUBE --name "Body" --location-json "[0,0,0]"'),
+  termCmd('harness-blender material create scene.blend PBR --base-color "#4a7aaa" --roughness 0.4'),
+  termCmd('harness-blender material assign scene.blend Body PBR'),
+  nl,
+  comment('# 5. Add a camera and light, then render'),
+  termCmd('harness-blender camera add scene.blend --name "MainCam" --location-json "[5,5,3]"'),
+  termCmd('harness-blender camera set-active scene.blend MainCam'),
+  termCmd('harness-blender light add scene.blend SUN --name "Key" --energy 5.0'),
+  termCmd('harness-blender render still scene.blend out.png --engine CYCLES --samples 128'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"render still","data":{"jobId":"job_r1","status":"queued"}}'),
+  termCmd('harness-blender render status job_r1'),
+].join('\n');
+
+const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"render still","data":{"jobId":"job_r1","status":"queued"}}');
+const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"material assign","error":{"code":"NOT_FOUND","message":"Object \\"Body\\" not found","retryable":false}}');
+
+type Flag = { flag: string; req: boolean; desc: string };
+type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
+
+const bridgeCommands: Command[] = [
+  {
+    name: 'bridge start',
+    synopsis: 'harness-blender bridge start [--host 127.0.0.1] [--port 41749]',
+    description: 'Start the local bridge server on port 41749. Must be running before any file, object, render, or other commands.',
+    flags: [
+      { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
+      { flag: '--port', req: false, desc: 'Port (default: 41749)' },
+    ],
+  },
+  {
+    name: 'bridge serve',
+    synopsis: 'harness-blender bridge serve',
+    description: 'Run the bridge in the foreground without daemonizing. Useful for debugging or containerized environments.',
+    flags: [],
+  },
+  {
+    name: 'bridge stop',
+    synopsis: 'harness-blender bridge stop',
+    description: 'Shut down the running bridge server.',
+    flags: [],
+  },
+  {
+    name: 'bridge status',
+    synopsis: 'harness-blender bridge status',
+    description: 'Check whether the bridge is reachable and healthy. Run before any mutating command.',
+    flags: [],
+  },
+  {
+    name: 'bridge verify',
+    synopsis: 'harness-blender bridge verify [--iterations 25] [--max-failures 0]',
+    description: 'Run a stability check against the bridge. Recommended before long editing or render sessions.',
+    flags: [
+      { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 25)' },
+      { flag: '--max-failures', req: false, desc: 'Allowed failures before abort (default: 0)' },
+    ],
+  },
+];
+
+const systemCommands: Command[] = [
+  {
+    name: 'version',
+    synopsis: 'harness-blender version',
+    description: 'Print the installed harnessgg-blender version. Does not require a running bridge.',
+    flags: [],
+  },
+  {
+    name: 'doctor',
+    synopsis: 'harness-blender doctor [--include-render]',
+    description: 'Check that Blender is installed, the bridge is reachable, and the environment is healthy.',
+    flags: [
+      { flag: '--include-render', req: false, desc: 'Also verify that rendering is functional' },
+    ],
+  },
+  {
+    name: 'actions',
+    synopsis: 'harness-blender actions',
+    description: 'List all available commands and subcommand groups supported by the bridge.',
+    flags: [],
+  },
+];
+
+const fileCommands: Command[] = [
+  {
+    name: 'file new',
+    synopsis: 'harness-blender file new <output.blend> [--overwrite]',
+    description: 'Create a new empty Blender project file at the given path.',
+    flags: [
+      { flag: '--overwrite', req: false, desc: 'Replace an existing file at the target path' },
+    ],
+  },
+  {
+    name: 'file copy',
+    synopsis: 'harness-blender file copy <source> <target> [--overwrite]',
+    description: 'Duplicate a .blend file to a new location.',
+    flags: [
+      { flag: '--overwrite', req: false, desc: 'Replace an existing file at the target path' },
+    ],
+  },
+  {
+    name: 'file inspect',
+    synopsis: 'harness-blender file inspect <project.blend>',
+    description: 'Return a structured summary of the project: objects, materials, cameras, lights, and scene settings.',
+    flags: [],
+  },
+  {
+    name: 'file validate',
+    synopsis: 'harness-blender file validate <project.blend>',
+    description: 'Validate the project structure. Run before renders and after destructive edits.',
+    flags: [],
+  },
+  {
+    name: 'file diff',
+    synopsis: 'harness-blender file diff <source> <target>',
+    description: 'Compare two .blend files and report structural differences.',
+    flags: [],
+  },
+  {
+    name: 'file snapshot',
+    synopsis: 'harness-blender file snapshot <project> <description>',
+    description: 'Save a named checkpoint of the project. Use before risky edits; restore with file undo.',
+    flags: [],
+  },
+  {
+    name: 'file undo / file redo',
+    synopsis: 'harness-blender file undo <project> [--snapshot-id <id>]\nharness-blender file redo <project>',
+    description: 'Undo the last edit or redo it. Pass --snapshot-id to jump to a specific named checkpoint.',
+    flags: [
+      { flag: '--snapshot-id', req: false, desc: 'Target snapshot identifier (undo only)' },
+    ],
+  },
+];
+
+const objectCommands: Command[] = [
+  {
+    name: 'object list',
+    synopsis: 'harness-blender object list <project> [--type MESH|CAMERA|LIGHT]',
+    description: 'List all objects in the scene, optionally filtered by type.',
+    flags: [
+      { flag: '--type', req: false, desc: 'Filter: MESH, CAMERA, or LIGHT' },
+    ],
+  },
+  {
+    name: 'object add',
+    synopsis: 'harness-blender object add <project> CUBE|SPHERE|CYLINDER|PLANE|CONE|TORUS [--name <s>] [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
+    description: 'Add a primitive mesh object to the scene.',
+    flags: [
+      { flag: '--name',          req: false, desc: 'Object name (auto-generated if omitted)' },
+      { flag: '--location-json', req: false, desc: 'XYZ position as JSON array, e.g. "[0,0,1]"' },
+      { flag: '--rotation-json', req: false, desc: 'XYZ euler rotation in radians as JSON array' },
+      { flag: '--scale-json',    req: false, desc: 'XYZ scale as JSON array' },
+      { flag: '--output',        req: false, desc: 'Write the modified project to this path instead of in-place' },
+    ],
+  },
+  {
+    name: 'object transform',
+    synopsis: 'harness-blender object transform <project> <name> [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
+    description: 'Set the location, rotation, or scale of a named object.',
+    flags: [
+      { flag: '--location-json', req: false, desc: 'New XYZ position' },
+      { flag: '--rotation-json', req: false, desc: 'New XYZ rotation in radians' },
+      { flag: '--scale-json',    req: false, desc: 'New XYZ scale' },
+      { flag: '--output',        req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'object delete',
+    synopsis: 'harness-blender object delete <project> <name> [--output <path>]',
+    description: 'Remove a named object from the scene.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'object duplicate',
+    synopsis: 'harness-blender object duplicate <project> <name> [--new-name <s>] [--output <path>]',
+    description: 'Duplicate an object in the scene.',
+    flags: [
+      { flag: '--new-name', req: false, desc: 'Name for the duplicated object' },
+      { flag: '--output',   req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'object rename',
+    synopsis: 'harness-blender object rename <project> <name> <new-name> [--output <path>]',
+    description: 'Rename an object.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'object parent / object unparent',
+    synopsis: 'harness-blender object parent <project> <child> <parent> [--output <path>]\nharness-blender object unparent <project> <child> [--output <path>]',
+    description: 'Set or clear the parent of an object.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'object shade-smooth / object shade-flat',
+    synopsis: 'harness-blender object shade-smooth <project> <name> [--output <path>]\nharness-blender object shade-flat <project> <name> [--output <path>]',
+    description: 'Set smooth or flat shading on a mesh object.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+];
+
+const cameraLightCommands: Command[] = [
+  {
+    name: 'camera list',
+    synopsis: 'harness-blender camera list <project>',
+    description: 'List all cameras in the scene.',
+    flags: [],
+  },
+  {
+    name: 'camera add',
+    synopsis: 'harness-blender camera add <project> [--name <s>] [--location-json <json>] [--rotation-json <json>] [--output <path>]',
+    description: 'Add a new camera to the scene.',
+    flags: [
+      { flag: '--name',          req: false, desc: 'Camera name' },
+      { flag: '--location-json', req: false, desc: 'XYZ position as JSON array' },
+      { flag: '--rotation-json', req: false, desc: 'XYZ rotation in radians as JSON array' },
+      { flag: '--output',        req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'camera set-active',
+    synopsis: 'harness-blender camera set-active <project> <name> [--output <path>]',
+    description: 'Set the named camera as the active render camera.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'camera set-lens',
+    synopsis: 'harness-blender camera set-lens <project> <name> <lens_mm> [--output <path>]',
+    description: 'Set the focal length of a camera in millimetres.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'camera set-dof',
+    synopsis: 'harness-blender camera set-dof <project> <name> [--use-dof] [--focus-distance <f>] [--aperture-fstop <f>] [--focus-object <s>] [--output <path>]',
+    description: 'Configure depth-of-field for a camera.',
+    flags: [
+      { flag: '--use-dof',        req: false, desc: 'Enable depth-of-field' },
+      { flag: '--focus-distance', req: false, desc: 'Focus distance in metres' },
+      { flag: '--aperture-fstop', req: false, desc: 'Aperture f-stop value' },
+      { flag: '--focus-object',   req: false, desc: 'Track focus to a named object' },
+      { flag: '--output',         req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'light add',
+    synopsis: 'harness-blender light add <project> POINT|SUN|SPOT|AREA [--name <s>] [--energy 1000.0] [--color <hex>] [--location-json <json>] [--output <path>]',
+    description: 'Add a light of the specified type to the scene.',
+    flags: [
+      { flag: '--name',          req: false, desc: 'Light name' },
+      { flag: '--energy',        req: false, desc: 'Light power in watts (default: 1000.0)' },
+      { flag: '--color',         req: false, desc: 'Light colour as hex, e.g. "#ffffff"' },
+      { flag: '--location-json', req: false, desc: 'XYZ position as JSON array' },
+      { flag: '--output',        req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'light list',
+    synopsis: 'harness-blender light list <project>',
+    description: 'List all lights in the scene.',
+    flags: [],
+  },
+  {
+    name: 'light set-energy',
+    synopsis: 'harness-blender light set-energy <project> <name> <energy> [--output <path>]',
+    description: 'Set the power of a light in watts.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'light set-color',
+    synopsis: 'harness-blender light set-color <project> <name> <hex> [--output <path>]',
+    description: 'Set the colour of a light using a hex string.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+];
+
+const materialModifierCommands: Command[] = [
+  {
+    name: 'material list',
+    synopsis: 'harness-blender material list <project>',
+    description: 'List all materials defined in the project.',
+    flags: [],
+  },
+  {
+    name: 'material create',
+    synopsis: 'harness-blender material create <project> <name> [--base-color <hex>] [--metallic <f>] [--roughness <f>] [--output <path>]',
+    description: 'Create a new Principled BSDF material.',
+    flags: [
+      { flag: '--base-color', req: false, desc: 'Base colour as hex, e.g. "#ffffff"' },
+      { flag: '--metallic',   req: false, desc: 'Metallic value 0.0 to 1.0' },
+      { flag: '--roughness',  req: false, desc: 'Roughness value 0.0 to 1.0' },
+      { flag: '--output',     req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'material assign',
+    synopsis: 'harness-blender material assign <project> <object> <material> [--output <path>]',
+    description: 'Assign a material to a named object.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'material set-base-color',
+    synopsis: 'harness-blender material set-base-color <project> <name> <hex> [--output <path>]',
+    description: 'Update the base colour of an existing material.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'material set-metallic',
+    synopsis: 'harness-blender material set-metallic <project> <name> <value> [--output <path>]',
+    description: 'Set the metallic value (0.0 to 1.0) of a material.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'material set-roughness',
+    synopsis: 'harness-blender material set-roughness <project> <name> <value> [--output <path>]',
+    description: 'Set the roughness value (0.0 to 1.0) of a material.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'modifier list',
+    synopsis: 'harness-blender modifier list <project> <object>',
+    description: 'List all modifiers on a named object.',
+    flags: [],
+  },
+  {
+    name: 'modifier add',
+    synopsis: 'harness-blender modifier add <project> <object> <type> [--modifier-name <s>] [--output <path>]',
+    description: 'Add a modifier of the given type to an object (e.g. SUBSURF, SOLIDIFY, ARRAY).',
+    flags: [
+      { flag: '--modifier-name', req: false, desc: 'Name for the new modifier' },
+      { flag: '--output',        req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'modifier remove',
+    synopsis: 'harness-blender modifier remove <project> <object> <name> [--output <path>]',
+    description: 'Remove a named modifier from an object.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+  {
+    name: 'modifier apply',
+    synopsis: 'harness-blender modifier apply <project> <object> <name> [--output <path>]',
+    description: 'Apply a modifier permanently, baking its effect into the mesh.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write to a different output path' },
+    ],
+  },
+];
+
+const importExportCommands: Command[] = [
+  {
+    name: 'import gltf|fbx|obj|usd',
+    synopsis: 'harness-blender import gltf|fbx|obj|usd <project> <source> [--output <path>]',
+    description: 'Import a mesh or scene file into the project. Supports glTF, FBX, OBJ, and USD formats. Timeout: 300s.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Write the modified project to this path' },
+    ],
+  },
+  {
+    name: 'export gltf|fbx|obj|usd',
+    synopsis: 'harness-blender export gltf|fbx|obj|usd <project> <target>',
+    description: 'Export the scene or selected objects to a file. Supports glTF, FBX, OBJ, and USD formats. Timeout: 300s.',
+    flags: [],
+  },
+];
+
+const renderCommands: Command[] = [
+  {
+    name: 'render still',
+    synopsis: 'harness-blender render still <project> <output.png> [--engine BLENDER_EEVEE|CYCLES] [--samples 64] [--resolution-x 1920] [--resolution-y 1080] [--camera <name>]',
+    description: 'Render a single frame to a PNG file. Returns a job_id immediately. Poll render status for progress. Timeout: 600s.',
+    flags: [
+      { flag: '--engine',       req: false, desc: 'BLENDER_EEVEE or CYCLES (default: BLENDER_EEVEE)' },
+      { flag: '--samples',      req: false, desc: 'Sample count (default: 64)' },
+      { flag: '--resolution-x', req: false, desc: 'Output width in pixels (default: 1920)' },
+      { flag: '--resolution-y', req: false, desc: 'Output height in pixels (default: 1080)' },
+      { flag: '--camera',       req: false, desc: 'Camera name to render from' },
+    ],
+  },
+  {
+    name: 'render animation',
+    synopsis: 'harness-blender render animation <project> <output_dir> [--engine BLENDER_EEVEE|CYCLES] [--frame-start 1] [--frame-end 250] [--fps 24] [--format PNG|JPEG|FFMPEG]',
+    description: 'Render an animation sequence to a directory. Returns a job_id. Timeout: 1800s.',
+    flags: [
+      { flag: '--engine',      req: false, desc: 'BLENDER_EEVEE or CYCLES' },
+      { flag: '--frame-start', req: false, desc: 'First frame to render (default: 1)' },
+      { flag: '--frame-end',   req: false, desc: 'Last frame to render (default: 250)' },
+      { flag: '--fps',         req: false, desc: 'Frames per second (default: 24)' },
+      { flag: '--format',      req: false, desc: 'Output format: PNG, JPEG, or FFMPEG' },
+    ],
+  },
+  {
+    name: 'render status',
+    synopsis: 'harness-blender render status <job_id>',
+    description: 'Poll the status and progress of an active or completed render job.',
+    flags: [],
+  },
+  {
+    name: 'render cancel',
+    synopsis: 'harness-blender render cancel <job_id>',
+    description: 'Cancel a queued or running render job.',
+    flags: [],
+  },
+];
+
+const errorCodes = [
+  { code: 'BRIDGE_UNAVAILABLE', exit: 5, retryable: true,  desc: 'Bridge not reachable. Run bridge start, then retry with backoff 0.5s, 1s, 2s (max 3 retries).' },
+  { code: 'INVALID_INPUT',      exit: 4, retryable: false, desc: 'Bad or missing arguments. Fix the command before retrying.' },
+  { code: 'VALIDATION_FAILED',  exit: 3, retryable: false, desc: 'Project structure is invalid. Run file validate and fix reported issues first.' },
+  { code: 'NOT_FOUND',          exit: 2, retryable: false, desc: 'Referenced object, material, or file does not exist. Check names and paths.' },
+  { code: 'ERROR',              exit: 1, retryable: false, desc: 'Unexpected error. Retry once; if it persists, file a bug report.' },
+];
+---
+
+<Layout
+  title="harnessgg-blender | Harness.gg"
+  description="CLI harness for AI agents to automate Blender. Create scenes, manage objects, apply materials, and render stills or animations with structured JSON output via a local bridge."
+>
+
+  <!-- Header -->
+  <section class="pt-10 pb-10 wrap">
+    <p class="breadcrumb">
+      <a href="/">harness.gg</a>
+      <span>/</span>
+      blender
+    </p>
+
+    <div class="title-row">
+      <h1>harnessgg-blender</h1>
+      <Badge className="badge-live">Published</Badge>
+      <Badge variant="outline" className="badge-ver">v{version}</Badge>
+    </div>
+
+    <p class="tagline">
+      CLI harness for AI agents to automate Blender 3D.
+      Create scenes, manipulate objects, configure cameras and lights, apply materials, and render stills or animations with structured JSON output via a local bridge.
+    </p>
+
+    <div class="install-row">
+      <code>{install}</code>
+      <CopyButton client:load text={install} />
+    </div>
+
+    <div class="ext-links">
+      <a href="https://pypi.org/project/harnessgg-blender/" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/Harness-blender" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
+      </a>
+    </div>
+    <p class="note">Agents can file bugs or feature requests with <code class="inline-code">curl -X POST https://harness.gg/api/submit</code> using <code class="inline-code">"package":"blender"</code> in the JSON payload.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Prerequisite -->
+  <section class="wrap sec">
+    <h2>Prerequisite</h2>
+    <p class="sec-intro">Blender must be installed and accessible on your PATH. The harness communicates with Blender through a local bridge process on port 41749. Python 3.10+ is required.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">terminal</span>
+      </div>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-blender bridge start`}></pre>
+    </div>
+    <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> (exit 5) with backoff 0.5s, 1s, 2s.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Quick flow -->
+  <section class="wrap sec">
+    <h2>Quick flow</h2>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">full agent session</span>
+      </div>
+      <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <section class="wrap sec">
+    <h2>Schema examples</h2>
+    <p class="sec-intro">Each command returns one JSON object. Check <code class="inline-code">ok</code> first, then inspect <code class="inline-code">data</code> or <code class="inline-code">error</code>.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">success</span>
+      </div>
+      <pre class="term-body" set:html={schemaSuccessHtml}></pre>
+    </div>
+    <div class="term-block" style="margin-top:12px;">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">error</span>
+      </div>
+      <pre class="term-body" set:html={schemaErrorHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Bridge commands -->
+  <section class="wrap sec" id="bridge">
+    <h2>Bridge commands</h2>
+    <p class="sec-intro">The bridge must be running on port 41749 before any file, object, render, or other commands. It binds to <code class="inline-code">127.0.0.1</code> only by default.</p>
+    <div class="cmd-list">
+      {bridgeCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- System commands -->
+  <section class="wrap sec" id="system">
+    <h2>System commands</h2>
+    <p class="sec-intro">Environment and capability checks. These do not require a project file.</p>
+    <div class="cmd-list">
+      {systemCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- File commands -->
+  <section class="wrap sec" id="file">
+    <h2>File commands</h2>
+    <p class="sec-intro">Create, copy, inspect, and version-control .blend project files. Run <code class="inline-code">file validate</code> before renders and after destructive changes.</p>
+    <div class="cmd-list">
+      {fileCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Object commands -->
+  <section class="wrap sec" id="object">
+    <h2>Object commands</h2>
+    <p class="sec-intro">Add, transform, and manage scene objects. Pass JSON arrays for location, rotation, and scale.</p>
+    <div class="cmd-list">
+      {objectCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Camera and light commands -->
+  <section class="wrap sec" id="camera-light">
+    <h2>Camera and light commands</h2>
+    <p class="sec-intro">Configure cameras (lens, DoF, active camera) and add or adjust lights. Always call <code class="inline-code">camera set-active</code> before rendering.</p>
+    <div class="cmd-list">
+      {cameraLightCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Material and modifier commands -->
+  <section class="wrap sec" id="material-modifier">
+    <h2>Material and modifier commands</h2>
+    <p class="sec-intro">Create Principled BSDF materials and manage object modifiers. Assign materials after creating them.</p>
+    <div class="cmd-list">
+      {materialModifierCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Import and export -->
+  <section class="wrap sec" id="import-export">
+    <h2>Import and export</h2>
+    <p class="sec-intro">Import external assets into a project or export the scene. Both commands have a 300s timeout. Supported formats: glTF, FBX, OBJ, USD.</p>
+    <div class="cmd-list">
+      {importExportCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Render commands -->
+  <section class="wrap sec" id="render">
+    <h2>Render commands</h2>
+    <p class="sec-intro">Render calls are long-running and return a job_id immediately. Poll <code class="inline-code">render status</code> until the job completes or fails. Still timeout: 600s. Animation timeout: 1800s.</p>
+    <div class="cmd-list">
+      {renderCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Response shape -->
+  <section class="wrap sec">
+    <h2>Response shape</h2>
+    <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
+
+    <div class="shape-grid">
+      <div>
+        <p class="shape-label">Success</p>
+        <pre class="code-block">{`{
+  "ok": true,
+  "protocolVersion": "1.0",
+  "command": "object add",
+  "data": { "name": "Body" }
+}`}</pre>
+      </div>
+      <div>
+        <p class="shape-label">Error</p>
+        <pre class="code-block">{`{
+  "ok": false,
+  "protocolVersion": "1.0",
+  "command": "object add",
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "Unknown primitive 'TORUS2'",
+    "retryable": false
+  }
+}`}</pre>
+      </div>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Error codes -->
+  <section class="wrap sec">
+    <h2>Error codes</h2>
+    <table class="flag-table">
+      <thead><tr><th>Code</th><th>Exit</th><th>Retryable</th><th>Action</th></tr></thead>
+      <tbody>
+        {errorCodes.map(e => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td class="mono-cell">{e.exit}</td>
+            <td class={e.retryable ? 'req-yes' : 'req-no'}>{e.retryable ? 'yes' : 'no'}</td>
+            <td>{e.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Submit feedback -->
+  <section class="wrap sec">
+    <h2>Submit feedback</h2>
+    <p class="sec-intro">
+      Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
+      Issues land on <a href="https://github.com/harnessgg/Harness-blender" target="_blank" rel="noopener">harnessgg/Harness-blender</a>.
+    </p>
+
+    <table class="flag-table" style="margin-bottom: 1.5rem">
+      <thead><tr><th>Field</th><th>Required</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="req-yes">yes</td><td class="mono-cell">"bug" | "feature" | "question"</td></tr>
+        <tr><td><code>package</code></td><td class="req-yes">yes</td><td class="mono-cell">"blender"</td></tr>
+        <tr><td><code>title</code></td><td class="req-yes">yes</td><td>Short summary</td></tr>
+        <tr><td><code>body</code></td><td class="req-yes">yes</td><td>Full description</td></tr>
+        <tr><td><code>context</code></td><td class="req-no">no</td><td>Bridge version, OS, Blender version, project details...</td></tr>
+      </tbody>
+    </table>
+
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">file a bug report</span>
+      </div>
+      <pre class="term-body" set:html={`<span class="t-prompt">$</span> curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"blender","title":"bridge fails on start","body":"Steps..."}'`}></pre>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* Fonts */
+  h1, h2  { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  h2      { font-family: 'Source Serif 4', Georgia, serif; }
+  code, pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  /* Layout */
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+  .sec  { padding: 40px 0; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 0.82rem; color: var(--muted-foreground); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb span { margin: 0 6px; opacity: 0.4; }
+
+  /* Title row */
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 500; color: var(--foreground); }
+  .badge-live    { background: color-mix(in oklch, var(--primary) 14%, transparent); color: var(--primary); border: none; font-size: 0.7rem; }
+  .badge-ver     { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted-foreground); }
+
+  /* Tagline */
+  .tagline { font-size: 1rem; color: var(--muted-foreground); max-width: 580px; line-height: 1.75; margin-bottom: 20px; }
+
+  /* Install row */
+  .install-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    background: var(--secondary); border: 2px solid #5a7a8a; border-radius: 10px;
+    max-width: 440px; margin-bottom: 16px;
+  }
+  .install-row code { font-size: 0.88rem; color: var(--foreground); }
+
+  /* External links */
+  .ext-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ext-badge { font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+  .ext-badge:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Section headings */
+  h2 { font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+  .sec-intro { font-size: 0.92rem; color: var(--muted-foreground); margin-bottom: 20px; line-height: 1.7; }
+  .sec-intro a { color: var(--primary); }
+  .note { font-size: 0.82rem; color: var(--muted-foreground); margin-top: 12px; }
+
+  /* Terminal blocks */
+  .term-block { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(30,42,52,0.12); border: 2px solid #5a7a8a; }
+  .term-bar {
+    display: flex; align-items: center; gap: 6px; padding: 10px 16px;
+    background: #283440; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #7a9aaa; opacity: 0.5; }
+  .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
+  .term-body {
+    padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; line-height: 1.85;
+    background: #1e2830; color: #c4ccd4;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .t-comment { color: rgba(255,255,255,0.2); }
+  .t-prompt  { color: #7a9aaa; user-select: none; }
+  .t-json    { color: rgba(255,255,255,0.3); }
+
+  /* Command cards */
+  .cmd-list  { display: flex; flex-direction: column; gap: 16px; }
+  .cmd-card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .cmd-head  { margin-bottom: 10px; }
+  .cmd-name  { font-size: 0.95rem; font-weight: 500; color: var(--primary); }
+  .cmd-synopsis {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--muted-foreground);
+    background: var(--secondary); padding: 9px 14px; border-radius: 8px; border: 2px solid #5a7a8a;
+    margin-bottom: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .cmd-desc { font-size: 0.87rem; color: var(--muted-foreground); margin-bottom: 14px; line-height: 1.65; }
+
+  /* Tables */
+  .flag-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .flag-table th {
+    text-align: left; padding: 7px 12px;
+    font-size: 0.73rem; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--muted-foreground); border-bottom: 1px solid var(--border);
+  }
+  .flag-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground); vertical-align: top; line-height: 1.5;
+  }
+  .flag-table td:first-child code { color: var(--foreground); font-size: 0.8rem; }
+  .req-yes { color: var(--primary) !important; font-size: 0.8rem; font-weight: 500; }
+  .req-no  { color: var(--muted-foreground) !important; font-size: 0.8rem; }
+  .mono-cell { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+
+  /* Response shape */
+  .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .shape-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .code-block {
+    background: #1e2830; color: #c4ccd4; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; padding: 18px 20px; border-radius: 12px; overflow-x: auto; line-height: 1.7;
+    border: 2px solid #5a7a8a;
+  }
+  .inline-code { background: var(--secondary); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+
+  @media (max-width: 600px) {
+    .shape-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.2rem; }
+  }
+</style>

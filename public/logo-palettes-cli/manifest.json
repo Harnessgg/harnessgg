@@ -1,0 +1,26 @@
+{
+  "midnight-cyan": {
+    "background": "#101820",
+    "foreground": "#4fd1c5"
+  },
+  "sunset-ember": {
+    "background": "#fff1e6",
+    "foreground": "#d9480f"
+  },
+  "forest-mint": {
+    "background": "#eef7ef",
+    "foreground": "#2f6b3c"
+  },
+  "royal-ink": {
+    "background": "#eef2ff",
+    "foreground": "#3730a3"
+  },
+  "charcoal-gold": {
+    "background": "#1f2937",
+    "foreground": "#f59e0b"
+  },
+  "rose-crimson": {
+    "background": "#fff1f2",
+    "foreground": "#be123c"
+  }
+}

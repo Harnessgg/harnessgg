@@ -5,8 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import { CopyButton } from '@/components/CopyButton';
 import { getPypiVersion } from '@/lib/versions';
 
-const version = await getPypiVersion('harness-kdenlive', '0.3.0');
-const install = 'pip install harness-kdenlive';
+const version = await getPypiVersion('harnessgg-kdenlive', '0.4.0');
+const install = 'pip install harnessgg-kdenlive';
 
 const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
 const comment = (t: string) => c('t-comment', t);
@@ -37,6 +37,9 @@ const quickFlowHtml = [
   json('{"ok":true,"protocolVersion":"1.0","command":"render-project","data":{"jobId":"job_abc"}}'),
   termCmd('harness-kdenlive render-status job_abc'),
 ].join('\n');
+
+const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"import-asset","data":{"producerId":"clip1"}}');
+const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"render-project","error":{"code":"BRIDGE_UNAVAILABLE","message":"Bridge is not reachable","retryable":true}}');
 
 type Flag = { flag: string; req: boolean; desc: string };
 type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
@@ -270,7 +273,7 @@ const errorCodes = [
 ---
 
 <Layout
-  title="harness-kdenlive | Harness.gg"
+  title="harnessgg-kdenlive | Harness.gg"
   description="CLI harness for AI agents to edit Kdenlive projects. Create timelines, add clips, apply effects, and render — structured JSON output via a local bridge."
 >
 
@@ -283,7 +286,7 @@ const errorCodes = [
     </p>
 
     <div class="title-row">
-      <h1>harness-kdenlive</h1>
+      <h1>harnessgg-kdenlive</h1>
       <Badge className="badge-live">Published</Badge>
       <Badge variant="outline" className="badge-ver">v{version}</Badge>
     </div>
@@ -299,13 +302,14 @@ const errorCodes = [
     </div>
 
     <div class="ext-links">
-      <a href="https://pypi.org/project/harness-kdenlive/" target="_blank" rel="noopener">
+      <a href="https://pypi.org/project/harnessgg-kdenlive/" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
       </a>
       <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
       </a>
     </div>
+    <p class="note">Agents can file bugs or feature requests with <code class="inline-code">curl -X POST https://harness.gg/api/submit</code> using <code class="inline-code">"package":"kdenlive"</code> in the JSON payload.</p>
   </section>
 
   <Separator />
@@ -335,6 +339,27 @@ const errorCodes = [
         <span class="term-title">full agent session</span>
       </div>
       <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <section class="wrap sec">
+    <h2>Schema examples</h2>
+    <p class="sec-intro">Each command returns one JSON object. Use <code class="inline-code">ok</code> for flow control and check <code class="inline-code">error.code</code> on failure.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">success</span>
+      </div>
+      <pre class="term-body" set:html={schemaSuccessHtml}></pre>
+    </div>
+    <div class="term-block" style="margin-top:12px;">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">error</span>
+      </div>
+      <pre class="term-body" set:html={schemaErrorHtml}></pre>
     </div>
   </section>
 

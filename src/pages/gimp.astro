@@ -1,0 +1,1172 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { CopyButton } from '@/components/CopyButton';
+import { getPypiVersion } from '@/lib/versions';
+
+const version = await getPypiVersion('harnessgg-gimp', '0.2.1');
+const install = 'pip install harnessgg-gimp';
+
+const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
+const comment = (t: string) => c('t-comment', t);
+const termCmd = (t: string) => `${c('t-prompt', '$')} ${t}`;
+const json = (t: string) => c('t-json', t);
+const nl = '\n';
+
+const quickFlowHtml = [
+  comment('# 1. Start the bridge'),
+  termCmd('harness-gimp bridge start'),
+  nl,
+  comment('# 2. Inspect the image'),
+  termCmd('harness-gimp inspect photo.png'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"inspect","data":{"width":3840,"height":2160,"layers":1}}'),
+  nl,
+  comment('# 3. Resize it'),
+  termCmd('harness-gimp resize photo.png --width 1920 --height 1080 --output resized.png'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"resize","data":{}}'),
+  nl,
+  comment('# 4. Adjust brightness and contrast'),
+  termCmd('harness-gimp brightness-contrast resized.png --brightness 0.1 --contrast 0.2 --output adjusted.png'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"brightness-contrast","data":{}}'),
+  nl,
+  comment('# 5. Apply a gaussian blur'),
+  termCmd('harness-gimp gaussian-blur adjusted.png --radius-x 2.0 --radius-y 2.0 --output blurred.png'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"gaussian-blur","data":{}}'),
+  nl,
+  comment('# 6. Export as JPEG'),
+  termCmd('harness-gimp export blurred.png final.jpg'),
+  json('{"ok":true,"protocolVersion":"1.0","command":"export","data":{"output":"final.jpg"}}'),
+].join('\n');
+
+const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"resize","data":{"output":"resized.png"}}');
+const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"open","error":{"code":"NOT_FOUND","message":"File not found","retryable":false}}');
+
+type Flag = { flag: string; req: boolean; desc: string };
+type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
+
+const bridgeCommands: Command[] = [
+  {
+    name: 'bridge start',
+    synopsis: 'harness-gimp bridge start [--host 127.0.0.1] [--port 41749]',
+    description: 'Start the local bridge server on port 41749. Must be running before any image editing commands.',
+    flags: [
+      { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
+      { flag: '--port', req: false, desc: 'Port (default: 41749)' },
+    ],
+  },
+  {
+    name: 'bridge serve',
+    synopsis: 'harness-gimp bridge serve',
+    description: 'Run the bridge in the foreground (blocking). Useful for container environments.',
+    flags: [],
+  },
+  {
+    name: 'bridge stop',
+    synopsis: 'harness-gimp bridge stop',
+    description: 'Shut down the running bridge server.',
+    flags: [],
+  },
+  {
+    name: 'bridge status',
+    synopsis: 'harness-gimp bridge status',
+    description: 'Check whether the bridge is reachable and healthy. Run before any mutating commands.',
+    flags: [],
+  },
+  {
+    name: 'bridge verify',
+    synopsis: 'harness-gimp bridge verify [--iterations 10] [--max-failures 0]',
+    description: 'Run a stability check against the bridge. Recommended before long editing sessions.',
+    flags: [
+      { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 10)' },
+      { flag: '--max-failures', req: false, desc: 'Allowed failures before abort (default: 0)' },
+    ],
+  },
+];
+
+const systemCommands: Command[] = [
+  {
+    name: 'version',
+    synopsis: 'harness-gimp version',
+    description: 'Print the package version. Does not require the bridge to be running.',
+    flags: [],
+  },
+  {
+    name: 'doctor',
+    synopsis: 'harness-gimp doctor',
+    description: 'Check the installation environment: GIMP availability, bridge connectivity, and Python version.',
+    flags: [],
+  },
+  {
+    name: 'actions',
+    synopsis: 'harness-gimp actions',
+    description: 'List all available commands with their synopses. Useful for agent discovery.',
+    flags: [],
+  },
+];
+
+const fileCommands: Command[] = [
+  {
+    name: 'open',
+    synopsis: 'harness-gimp open <image>',
+    description: 'Open an image file through the bridge. Use before commands that require an open document context.',
+    flags: [],
+  },
+  {
+    name: 'save',
+    synopsis: 'harness-gimp save <image> <output>',
+    description: 'Save the image to a file path. Writes in the format inferred from the output extension.',
+    flags: [],
+  },
+  {
+    name: 'export',
+    synopsis: 'harness-gimp export <image> <output>',
+    description: 'Export the image, inferring format from the output file extension. Supported extensions: .jpg, .png, .webp, .xcf.',
+    flags: [],
+  },
+  {
+    name: 'clone-project',
+    synopsis: 'harness-gimp clone-project <source> <target> [--overwrite]',
+    description: 'Copy an image file to a new path. Use to create a working copy before destructive edits.',
+    flags: [
+      { flag: '--overwrite', req: false, desc: 'Replace target if it already exists' },
+    ],
+  },
+  {
+    name: 'inspect',
+    synopsis: 'harness-gimp inspect <image>',
+    description: 'Return a structured summary of the image: dimensions, colour mode, layer count, and layer names.',
+    flags: [],
+  },
+  {
+    name: 'validate',
+    synopsis: 'harness-gimp validate <image>',
+    description: 'Check that the image file is readable and structurally valid. Run before a batch pipeline.',
+    flags: [],
+  },
+  {
+    name: 'diff',
+    synopsis: 'harness-gimp diff <source> <target>',
+    description: 'Compare two image files and return a pixel-level difference summary.',
+    flags: [],
+  },
+  {
+    name: 'snapshot',
+    synopsis: 'harness-gimp snapshot <image> <description>',
+    description: 'Save a named checkpoint of the image state. Use before risky edits; restore with undo.',
+    flags: [],
+  },
+  {
+    name: 'undo',
+    synopsis: 'harness-gimp undo <image>',
+    description: 'Undo the last edit applied to the image.',
+    flags: [],
+  },
+  {
+    name: 'redo',
+    synopsis: 'harness-gimp redo <image>',
+    description: 'Redo the last undone edit.',
+    flags: [],
+  },
+];
+
+const transformCommands: Command[] = [
+  {
+    name: 'resize',
+    synopsis: 'harness-gimp resize <image> --width <int> --height <int> [--output <path>]',
+    description: 'Scale the image to the given dimensions. Overwrites the input file unless --output is specified.',
+    flags: [
+      { flag: '--width',  req: true,  desc: 'Target width in pixels' },
+      { flag: '--height', req: true,  desc: 'Target height in pixels' },
+      { flag: '--output', req: false, desc: 'Save result to a different file (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'crop',
+    synopsis: 'harness-gimp crop <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    description: 'Crop the image to the given rectangle.',
+    flags: [
+      { flag: '--x',      req: true,  desc: 'Left edge of the crop region in pixels' },
+      { flag: '--y',      req: true,  desc: 'Top edge of the crop region in pixels' },
+      { flag: '--width',  req: true,  desc: 'Crop width in pixels' },
+      { flag: '--height', req: true,  desc: 'Crop height in pixels' },
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'rotate',
+    synopsis: 'harness-gimp rotate <image> --degrees 90|180|270 [--output <path>]',
+    description: 'Rotate the image by a fixed angle. Only 90, 180, and 270 degree values are accepted.',
+    flags: [
+      { flag: '--degrees', req: true,  desc: '90, 180, or 270' },
+      { flag: '--output',  req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'flip',
+    synopsis: 'harness-gimp flip <image> --axis horizontal|vertical [--output <path>]',
+    description: 'Flip the image along the horizontal or vertical axis.',
+    flags: [
+      { flag: '--axis',   req: true,  desc: 'horizontal or vertical' },
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'canvas-size',
+    synopsis: 'harness-gimp canvas-size <image> --width <int> --height <int> [--offset-x <int>] [--offset-y <int>] [--output <path>]',
+    description: 'Resize the canvas without scaling the image content. Use offset flags to control where the existing content is positioned on the new canvas.',
+    flags: [
+      { flag: '--width',    req: true,  desc: 'New canvas width in pixels' },
+      { flag: '--height',   req: true,  desc: 'New canvas height in pixels' },
+      { flag: '--offset-x', req: false, desc: 'X offset of existing content on the new canvas' },
+      { flag: '--offset-y', req: false, desc: 'Y offset of existing content on the new canvas' },
+      { flag: '--output',   req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const colorCommands: Command[] = [
+  {
+    name: 'brightness-contrast',
+    synopsis: 'harness-gimp brightness-contrast <image> [--brightness <f>] [--contrast <f>] [--layer-index <int>] [--output <path>]',
+    description: 'Adjust brightness and contrast on a layer. Values are floating-point offsets.',
+    flags: [
+      { flag: '--brightness',  req: false, desc: 'Brightness adjustment' },
+      { flag: '--contrast',    req: false, desc: 'Contrast adjustment' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'levels',
+    synopsis: 'harness-gimp levels <image> [--black <f>] [--white <f>] [--gamma <f>] [--layer-index <int>] [--output <path>]',
+    description: 'Set input levels for black point, white point, and gamma on a layer.',
+    flags: [
+      { flag: '--black',       req: false, desc: 'Black input level' },
+      { flag: '--white',       req: false, desc: 'White input level' },
+      { flag: '--gamma',       req: false, desc: 'Gamma correction value' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'curves',
+    synopsis: 'harness-gimp curves <image> --points-json <json> [--channel value|red|green|blue|alpha] [--layer-index <int>] [--output <path>]',
+    description: 'Apply a curves adjustment using control points provided as a JSON array. Use --channel to target a specific channel.',
+    flags: [
+      { flag: '--points-json',  req: true,  desc: 'JSON array of curve control points' },
+      { flag: '--channel',      req: false, desc: 'value, red, green, blue, or alpha (default: value)' },
+      { flag: '--layer-index',  req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',       req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'color-balance',
+    synopsis: 'harness-gimp color-balance <image> [--cyan-red <f>] [--magenta-green <f>] [--yellow-blue <f>] [--transfer-mode MIDTONES] [--layer-index <int>] [--output <path>]',
+    description: 'Shift the colour balance of a layer across shadow, midtone, and highlight ranges.',
+    flags: [
+      { flag: '--cyan-red',      req: false, desc: 'Cyan-to-red shift' },
+      { flag: '--magenta-green', req: false, desc: 'Magenta-to-green shift' },
+      { flag: '--yellow-blue',   req: false, desc: 'Yellow-to-blue shift' },
+      { flag: '--transfer-mode', req: false, desc: 'Tonal range: SHADOWS, MIDTONES, or HIGHLIGHTS (default: MIDTONES)' },
+      { flag: '--layer-index',   req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',        req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'hue-saturation',
+    synopsis: 'harness-gimp hue-saturation <image> [--hue <f>] [--saturation <f>] [--lightness <f>] [--layer-index <int>] [--output <path>]',
+    description: 'Adjust hue, saturation, and lightness on a layer.',
+    flags: [
+      { flag: '--hue',         req: false, desc: 'Hue rotation in degrees' },
+      { flag: '--saturation',  req: false, desc: 'Saturation adjustment' },
+      { flag: '--lightness',   req: false, desc: 'Lightness adjustment' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'color-temperature',
+    synopsis: 'harness-gimp color-temperature <image> --temperature <f> [--layer-index <int>] [--output <path>]',
+    description: 'Shift the colour temperature of a layer. Positive values are warmer, negative values are cooler.',
+    flags: [
+      { flag: '--temperature', req: true,  desc: 'Temperature shift value' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'invert',
+    synopsis: 'harness-gimp invert <image> [--layer-index <int>] [--output <path>]',
+    description: 'Invert the colours of a layer.',
+    flags: [
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'desaturate',
+    synopsis: 'harness-gimp desaturate <image> [--mode luma|average|lightness] [--layer-index <int>] [--output <path>]',
+    description: 'Convert a layer to greyscale using the specified desaturation algorithm.',
+    flags: [
+      { flag: '--mode',        req: false, desc: 'luma, average, or lightness (default: luma)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const filterCommands: Command[] = [
+  {
+    name: 'blur',
+    synopsis: 'harness-gimp blur <image> [--radius 4.0] [--layer-index <int>] [--output <path>]',
+    description: 'Apply a simple blur filter to a layer.',
+    flags: [
+      { flag: '--radius',      req: false, desc: 'Blur radius (default: 4.0)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'gaussian-blur',
+    synopsis: 'harness-gimp gaussian-blur <image> [--radius-x 4.0] [--radius-y 4.0] [--layer-index <int>] [--output <path>]',
+    description: 'Apply a Gaussian blur with independent horizontal and vertical radii.',
+    flags: [
+      { flag: '--radius-x',    req: false, desc: 'Horizontal blur radius (default: 4.0)' },
+      { flag: '--radius-y',    req: false, desc: 'Vertical blur radius (default: 4.0)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'sharpen',
+    synopsis: 'harness-gimp sharpen <image> [--radius 2.0] [--amount 1.0] [--layer-index <int>] [--output <path>]',
+    description: 'Apply a sharpen filter to a layer.',
+    flags: [
+      { flag: '--radius',      req: false, desc: 'Sharpen radius (default: 2.0)' },
+      { flag: '--amount',      req: false, desc: 'Sharpen strength (default: 1.0)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'unsharp-mask',
+    synopsis: 'harness-gimp unsharp-mask <image> [--radius 2.0] [--amount 1.0] [--threshold 0.0] [--layer-index <int>] [--output <path>]',
+    description: 'Apply an unsharp mask for controlled edge sharpening.',
+    flags: [
+      { flag: '--radius',      req: false, desc: 'Radius of the blur used in the mask (default: 2.0)' },
+      { flag: '--amount',      req: false, desc: 'Sharpening strength (default: 1.0)' },
+      { flag: '--threshold',   req: false, desc: 'Minimum difference to apply sharpening (default: 0.0)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'noise-reduction',
+    synopsis: 'harness-gimp noise-reduction <image> [--strength 3] [--layer-index <int>] [--output <path>]',
+    description: 'Apply a noise reduction filter to a layer.',
+    flags: [
+      { flag: '--strength',    req: false, desc: 'Reduction strength 1-10 (default: 3)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const layerCommands: Command[] = [
+  {
+    name: 'layer-list',
+    synopsis: 'harness-gimp layer-list <image>',
+    description: 'List all layers in the image with their index, name, opacity, and blend mode.',
+    flags: [],
+  },
+  {
+    name: 'layer-add',
+    synopsis: 'harness-gimp layer-add <image> --name <s> [--position <int>] [--output <path>]',
+    description: 'Add a new empty layer to the image.',
+    flags: [
+      { flag: '--name',     req: true,  desc: 'Name for the new layer' },
+      { flag: '--position', req: false, desc: 'Insert position in the layer stack (default: top)' },
+      { flag: '--output',   req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-remove',
+    synopsis: 'harness-gimp layer-remove <image> --layer-index <int> [--output <path>]',
+    description: 'Remove the layer at the given index.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the layer to remove' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-rename',
+    synopsis: 'harness-gimp layer-rename <image> --layer-index <int> --name <s> [--output <path>]',
+    description: 'Rename a layer.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
+      { flag: '--name',        req: true,  desc: 'New name for the layer' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-opacity',
+    synopsis: 'harness-gimp layer-opacity <image> --layer-index <int> --opacity <0-100> [--output <path>]',
+    description: 'Set the opacity of a layer to a value between 0 (transparent) and 100 (fully opaque).',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
+      { flag: '--opacity',     req: true,  desc: 'Opacity value from 0 to 100' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-blend-mode',
+    synopsis: 'harness-gimp layer-blend-mode <image> --layer-index <int> --mode <s> [--output <path>]',
+    description: 'Set the blend mode of a layer. Common modes: NORMAL, MULTIPLY, SCREEN, OVERLAY.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
+      { flag: '--mode',        req: true,  desc: 'Blend mode name: NORMAL, MULTIPLY, SCREEN, OVERLAY, etc.' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-duplicate',
+    synopsis: 'harness-gimp layer-duplicate <image> --layer-index <int> [--position <int>] [--output <path>]',
+    description: 'Duplicate a layer and insert the copy at the specified position.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the layer to duplicate' },
+      { flag: '--position',    req: false, desc: 'Stack position for the new copy (default: directly above source)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-merge-down',
+    synopsis: 'harness-gimp layer-merge-down <image> --layer-index <int> [--output <path>]',
+    description: 'Merge the layer at the given index down onto the layer below it.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the layer to merge down' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'layer-reorder',
+    synopsis: 'harness-gimp layer-reorder <image> --layer-index <int> --index <int> [--output <path>]',
+    description: 'Move a layer to a new position in the layer stack.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Current index of the layer to move' },
+      { flag: '--index',       req: true,  desc: 'Destination index in the layer stack' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const selectionCommands: Command[] = [
+  {
+    name: 'select-all',
+    synopsis: 'harness-gimp select-all <image> [--output <path>]',
+    description: 'Select the entire canvas.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'select-none',
+    synopsis: 'harness-gimp select-none <image> [--output <path>]',
+    description: 'Deselect the current selection.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'invert-selection',
+    synopsis: 'harness-gimp invert-selection <image> [--output <path>]',
+    description: 'Invert the current selection so that the unselected area becomes selected.',
+    flags: [
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'feather-selection',
+    synopsis: 'harness-gimp feather-selection <image> --radius <f> [--output <path>]',
+    description: 'Feather the edges of the current selection by the given radius.',
+    flags: [
+      { flag: '--radius', req: true,  desc: 'Feather radius in pixels' },
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'select-rectangle',
+    synopsis: 'harness-gimp select-rectangle <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    description: 'Create a rectangular selection.',
+    flags: [
+      { flag: '--x',      req: true,  desc: 'Left edge of the selection' },
+      { flag: '--y',      req: true,  desc: 'Top edge of the selection' },
+      { flag: '--width',  req: true,  desc: 'Width of the selection' },
+      { flag: '--height', req: true,  desc: 'Height of the selection' },
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'select-ellipse',
+    synopsis: 'harness-gimp select-ellipse <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    description: 'Create an elliptical selection bounded by the given rectangle.',
+    flags: [
+      { flag: '--x',      req: true,  desc: 'Left edge of the bounding rectangle' },
+      { flag: '--y',      req: true,  desc: 'Top edge of the bounding rectangle' },
+      { flag: '--width',  req: true,  desc: 'Bounding rectangle width' },
+      { flag: '--height', req: true,  desc: 'Bounding rectangle height' },
+      { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'add-layer-mask',
+    synopsis: 'harness-gimp add-layer-mask <image> --layer-index <int> [--mode WHITE] [--output <path>]',
+    description: 'Add a layer mask to the specified layer. The default mode WHITE creates a fully visible mask.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the layer to mask' },
+      { flag: '--mode',        req: false, desc: 'Mask initialisation mode (default: WHITE)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'apply-layer-mask',
+    synopsis: 'harness-gimp apply-layer-mask <image> --layer-index <int> [--output <path>]',
+    description: 'Apply and remove the layer mask, merging it permanently into the layer.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the layer whose mask to apply' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const textCommands: Command[] = [
+  {
+    name: 'add-text',
+    synopsis: 'harness-gimp add-text <image> --text <s> --x <int> --y <int> [--font Sans] [--size 36.0] [--color #ffffff] [--layer-index <int>] [--output <path>]',
+    description: 'Add a text layer to the image at the given coordinates.',
+    flags: [
+      { flag: '--text',        req: true,  desc: 'Text content to render' },
+      { flag: '--x',           req: true,  desc: 'X position of the text origin' },
+      { flag: '--y',           req: true,  desc: 'Y position of the text origin' },
+      { flag: '--font',        req: false, desc: 'Font family name (default: Sans)' },
+      { flag: '--size',        req: false, desc: 'Font size in points (default: 36.0)' },
+      { flag: '--color',       req: false, desc: 'Text colour as a hex code (default: #ffffff)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer for the text (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'update-text',
+    synopsis: 'harness-gimp update-text <image> --layer-index <int> --text <s> [--output <path>]',
+    description: 'Update the text content of an existing text layer.',
+    flags: [
+      { flag: '--layer-index', req: true,  desc: 'Index of the text layer to update' },
+      { flag: '--text',        req: true,  desc: 'New text content' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+  {
+    name: 'stroke-selection',
+    synopsis: 'harness-gimp stroke-selection <image> --width <f> [--color #ffffff] [--layer-index <int>] [--output <path>]',
+    description: 'Stroke the current selection boundary with the given width and colour.',
+    flags: [
+      { flag: '--width',       req: true,  desc: 'Stroke width in pixels' },
+      { flag: '--color',       req: false, desc: 'Stroke colour as a hex code (default: #ffffff)' },
+      { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
+      { flag: '--output',      req: false, desc: 'Output file path (default: overwrite input)' },
+    ],
+  },
+];
+
+const errorCodes = [
+  { code: 'BRIDGE_UNAVAILABLE', exit: 5, retryable: true,  desc: 'Bridge not reachable. Run bridge start then retry with backoff 0.5s, 1s, 2s (max 3 retries). This is the only retryable exit code.' },
+  { code: 'INVALID_INPUT',      exit: 4, retryable: false, desc: 'Bad or missing arguments. Fix the command before retrying.' },
+  { code: 'VALIDATION_FAILED',  exit: 3, retryable: false, desc: 'Image or parameters failed validation. Inspect the image and fix issues first.' },
+  { code: 'NOT_FOUND',          exit: 2, retryable: false, desc: 'File path not found. Check that the image path exists and is readable.' },
+  { code: 'ERROR',              exit: 1, retryable: false, desc: 'General error. Check the error message and fix the cause before retrying.' },
+];
+---
+
+<Layout
+  title="harnessgg-gimp | Harness.gg"
+  description="CLI harness for AI agents to edit images with GIMP. Resize, colour-adjust, apply filters, manage layers, and export — structured JSON output via a local bridge."
+>
+
+  <!-- Header -->
+  <section class="pt-10 pb-10 wrap">
+    <p class="breadcrumb">
+      <a href="/">harness.gg</a>
+      <span>/</span>
+      gimp
+    </p>
+
+    <div class="title-row">
+      <h1>harnessgg-gimp</h1>
+      <Badge className="badge-live">Published</Badge>
+      <Badge variant="outline" className="badge-ver">v{version}</Badge>
+    </div>
+
+    <p class="tagline">
+      CLI harness for AI agents to automate GIMP image editing.
+      Resize, crop, adjust colours, apply filters, manage layers, and export — all with structured JSON output via a local bridge.
+    </p>
+
+    <div class="install-row">
+      <code>{install}</code>
+      <CopyButton client:load text={install} />
+    </div>
+
+    <div class="ext-links">
+      <a href="https://pypi.org/project/harnessgg-gimp/" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
+      </a>
+      <a href="https://github.com/harnessgg/Harness-gimp" target="_blank" rel="noopener">
+        <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
+      </a>
+    </div>
+    <p class="note">Agents can file bugs or feature requests with <code class="inline-code">curl -X POST https://harness.gg/api/submit</code> using <code class="inline-code">"package":"gimp"</code> in the JSON payload.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Prerequisite -->
+  <section class="wrap sec">
+    <h2>Prerequisite</h2>
+    <p class="sec-intro">GIMP must be installed. The harness uses a local bridge process on port 41749 to communicate with it. Python 3.10+ required.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">terminal</span>
+      </div>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-gimp bridge start`}></pre>
+    </div>
+    <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> (exit 5) with backoff 0.5s, 1s, 2s.</p>
+  </section>
+
+  <Separator />
+
+  <!-- Quick flow -->
+  <section class="wrap sec">
+    <h2>Quick flow</h2>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">full agent session</span>
+      </div>
+      <pre class="term-body" set:html={quickFlowHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <section class="wrap sec">
+    <h2>Schema examples</h2>
+    <p class="sec-intro">Each command returns one JSON object. Use <code class="inline-code">ok</code> and <code class="inline-code">error.code</code> for branching.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">success</span>
+      </div>
+      <pre class="term-body" set:html={schemaSuccessHtml}></pre>
+    </div>
+    <div class="term-block" style="margin-top:12px;">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">error</span>
+      </div>
+      <pre class="term-body" set:html={schemaErrorHtml}></pre>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Bridge commands -->
+  <section class="wrap sec" id="bridge">
+    <h2>Bridge commands</h2>
+    <p class="sec-intro">The bridge must be running before any image editing call. It binds to <code class="inline-code">127.0.0.1:41749</code> by default.</p>
+    <div class="cmd-list">
+      {bridgeCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- System commands -->
+  <section class="wrap sec" id="system">
+    <h2>System commands</h2>
+    <p class="sec-intro">Utility commands for checking the installation. <code class="inline-code">version</code> does not require the bridge.</p>
+    <div class="cmd-list">
+      {systemCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- File commands -->
+  <section class="wrap sec" id="file">
+    <h2>File commands</h2>
+    <p class="sec-intro">Commands operate on image file paths. Use <code class="inline-code">--output</code> to save to a different path; the default behaviour is to overwrite the input file.</p>
+    <div class="cmd-list">
+      {fileCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Transform commands -->
+  <section class="wrap sec" id="transform">
+    <h2>Transform commands</h2>
+    <p class="sec-intro">Geometric transformations on the full image canvas. All accept <code class="inline-code">--output</code> to preserve the original.</p>
+    <div class="cmd-list">
+      {transformCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Color adjustments -->
+  <section class="wrap sec" id="color">
+    <h2>Color adjustments</h2>
+    <p class="sec-intro">Colour correction commands. Use <code class="inline-code">--layer-index</code> to target a specific layer (default: 0).</p>
+    <div class="cmd-list">
+      {colorCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Filters -->
+  <section class="wrap sec" id="filters">
+    <h2>Filters</h2>
+    <p class="sec-intro">Convolution and noise filters. All operate on a single layer and accept <code class="inline-code">--output</code>.</p>
+    <div class="cmd-list">
+      {filterCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Layer commands -->
+  <section class="wrap sec" id="layers">
+    <h2>Layer commands</h2>
+    <p class="sec-intro">Add, remove, reorder, and configure layers. Use <code class="inline-code">layer-list</code> to discover layer indices before targeting them.</p>
+    <div class="cmd-list">
+      {layerCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Selection commands -->
+  <section class="wrap sec" id="selection">
+    <h2>Selection commands</h2>
+    <p class="sec-intro">Create and manipulate selections. Selections persist across commands until cleared with <code class="inline-code">select-none</code>.</p>
+    <div class="cmd-list">
+      {selectionCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Text commands -->
+  <section class="wrap sec" id="text">
+    <h2>Text commands</h2>
+    <p class="sec-intro">Add and modify text layers, and stroke active selections.</p>
+    <div class="cmd-list">
+      {textCommands.map(command => (
+        <div class="cmd-card" id={`cmd-${command.name.replace(' ','-')}`}>
+          <div class="cmd-head">
+            <code class="cmd-name">{command.name}</code>
+          </div>
+          <pre class="cmd-synopsis">{command.synopsis}</pre>
+          <p class="cmd-desc">{command.description}</p>
+          {command.flags.length > 0 && (
+            <table class="flag-table">
+              <thead>
+                <tr><th>Flag</th><th>Required</th><th>Description</th></tr>
+              </thead>
+              <tbody>
+                {command.flags.map(f => (
+                  <tr>
+                    <td><code>{f.flag}</code></td>
+                    <td class={f.req ? 'req-yes' : 'req-no'}>{f.req ? 'yes' : 'no'}</td>
+                    <td>{f.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Response shape -->
+  <section class="wrap sec">
+    <h2>Response shape</h2>
+    <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
+
+    <div class="shape-grid">
+      <div>
+        <p class="shape-label">Success</p>
+        <pre class="code-block">{`{
+  "ok": true,
+  "protocolVersion": "1.0",
+  "command": "resize",
+  "data": {}
+}`}</pre>
+      </div>
+      <div>
+        <p class="shape-label">Error</p>
+        <pre class="code-block">{`{
+  "ok": false,
+  "protocolVersion": "1.0",
+  "command": "resize",
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "File 'photo.png' not found",
+    "retryable": false
+  }
+}`}</pre>
+      </div>
+    </div>
+  </section>
+
+  <Separator />
+
+  <!-- Error codes -->
+  <section class="wrap sec">
+    <h2>Error codes</h2>
+    <table class="flag-table">
+      <thead><tr><th>Code</th><th>Exit</th><th>Retryable</th><th>Action</th></tr></thead>
+      <tbody>
+        {errorCodes.map(e => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td class="mono-cell">{e.exit}</td>
+            <td class={e.retryable ? 'req-yes' : 'req-no'}>{e.retryable ? 'yes' : 'no'}</td>
+            <td>{e.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  <Separator />
+
+  <!-- Submit feedback -->
+  <section class="wrap sec">
+    <h2>Submit feedback</h2>
+    <p class="sec-intro">
+      Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
+      Issues land on <a href="https://github.com/harnessgg/Harness-gimp" target="_blank" rel="noopener">harnessgg/Harness-gimp</a>.
+    </p>
+
+    <table class="flag-table" style="margin-bottom: 1.5rem">
+      <thead><tr><th>Field</th><th>Required</th><th>Values</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="req-yes">yes</td><td class="mono-cell">"bug" | "feature" | "question"</td></tr>
+        <tr><td><code>package</code></td><td class="req-yes">yes</td><td class="mono-cell">"gimp"</td></tr>
+        <tr><td><code>title</code></td><td class="req-yes">yes</td><td>Short summary</td></tr>
+        <tr><td><code>body</code></td><td class="req-yes">yes</td><td>Full description</td></tr>
+        <tr><td><code>context</code></td><td class="req-no">no</td><td>Bridge version, OS, image details...</td></tr>
+      </tbody>
+    </table>
+
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">file a bug report</span>
+      </div>
+      <pre class="term-body" set:html={`<span class="t-prompt">$</span> curl -X POST https://harness.gg/api/submit \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"bug","package":"gimp","title":"bridge fails on start","body":"Steps..."}'`}></pre>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* Fonts */
+  h1, h2  { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  h2      { font-family: 'Source Serif 4', Georgia, serif; }
+  code, pre { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  /* Layout */
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 24px; }
+  .sec  { padding: 40px 0; }
+
+  /* Breadcrumb */
+  .breadcrumb { font-size: 0.82rem; color: var(--muted-foreground); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb span { margin: 0 6px; opacity: 0.4; }
+
+  /* Title row */
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 500; color: var(--foreground); }
+  .badge-live    { background: color-mix(in oklch, var(--primary) 14%, transparent); color: var(--primary); border: none; font-size: 0.7rem; }
+  .badge-ver     { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted-foreground); }
+
+  /* Tagline */
+  .tagline { font-size: 1rem; color: var(--muted-foreground); max-width: 580px; line-height: 1.75; margin-bottom: 20px; }
+
+  /* Install row */
+  .install-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px;
+    background: var(--secondary); border: 2px solid #5a7a8a; border-radius: 10px;
+    max-width: 440px; margin-bottom: 16px;
+  }
+  .install-row code { font-size: 0.88rem; color: var(--foreground); }
+
+  /* External links */
+  .ext-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .ext-badge { font-size: 0.78rem; cursor: pointer; transition: all 0.15s; }
+  .ext-badge:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Section headings */
+  h2 { font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+  .sec-intro { font-size: 0.92rem; color: var(--muted-foreground); margin-bottom: 20px; line-height: 1.7; }
+  .sec-intro a { color: var(--primary); }
+  .note { font-size: 0.82rem; color: var(--muted-foreground); margin-top: 12px; }
+
+  /* Terminal blocks */
+  .term-block { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(30,42,52,0.12); border: 2px solid #5a7a8a; }
+  .term-bar {
+    display: flex; align-items: center; gap: 6px; padding: 10px 16px;
+    background: #283440; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #7a9aaa; opacity: 0.5; }
+  .term-title { margin-left: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.2); }
+  .term-body {
+    padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; line-height: 1.85;
+    background: #1e2830; color: #c4ccd4;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .t-comment { color: rgba(255,255,255,0.2); }
+  .t-prompt  { color: #7a9aaa; user-select: none; }
+  .t-json    { color: rgba(255,255,255,0.3); }
+
+  /* Command cards */
+  .cmd-list  { display: flex; flex-direction: column; gap: 16px; }
+  .cmd-card  { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .cmd-head  { margin-bottom: 10px; }
+  .cmd-name  { font-size: 0.95rem; font-weight: 500; color: var(--primary); }
+  .cmd-synopsis {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--muted-foreground);
+    background: var(--secondary); padding: 9px 14px; border-radius: 8px; border: 2px solid #5a7a8a;
+    margin-bottom: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .cmd-desc { font-size: 0.87rem; color: var(--muted-foreground); margin-bottom: 14px; line-height: 1.65; }
+
+  /* Tables */
+  .flag-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  .flag-table th {
+    text-align: left; padding: 7px 12px;
+    font-size: 0.73rem; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--muted-foreground); border-bottom: 1px solid var(--border);
+  }
+  .flag-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground); vertical-align: top; line-height: 1.5;
+  }
+  .flag-table td:first-child code { color: var(--foreground); font-size: 0.8rem; }
+  .req-yes { color: var(--primary) !important; font-size: 0.8rem; font-weight: 500; }
+  .req-no  { color: var(--muted-foreground) !important; font-size: 0.8rem; }
+  .mono-cell { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+
+  /* Response shape */
+  .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .shape-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .code-block {
+    background: #1e2830; color: #c4ccd4; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; padding: 18px 20px; border-radius: 12px; overflow-x: auto; line-height: 1.7;
+    border: 2px solid #5a7a8a;
+  }
+  .inline-code { background: var(--secondary); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+
+  @media (max-width: 600px) {
+    .shape-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.2rem; }
+  }
+</style>
