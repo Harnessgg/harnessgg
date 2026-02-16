@@ -16,29 +16,29 @@ const nl = '\n';
 
 const quickFlowHtml = [
   comment('# 1. Start the bridge'),
-  termCmd('harness-blender bridge start'),
+  termCmd('harnessgg-blender bridge start'),
   nl,
   comment('# 2. Verify stability'),
-  termCmd('harness-blender bridge status'),
-  termCmd('harness-blender bridge verify --iterations 25'),
+  termCmd('harnessgg-blender bridge status'),
+  termCmd('harnessgg-blender bridge verify --iterations 25'),
   nl,
   comment('# 3. Create a new project and inspect it'),
-  termCmd('harness-blender file new scene.blend --overwrite'),
-  termCmd('harness-blender file inspect scene.blend'),
+  termCmd('harnessgg-blender file new scene.blend --overwrite'),
+  termCmd('harnessgg-blender file inspect scene.blend'),
   json('{"ok":true,"protocolVersion":"1.0","command":"file inspect","data":{"objects":[],"materials":[],"cameras":[]}}'),
   nl,
   comment('# 4. Add objects and a material'),
-  termCmd('harness-blender object add scene.blend CUBE --name "Body" --location-json "[0,0,0]"'),
-  termCmd('harness-blender material create scene.blend PBR --base-color "#4a7aaa" --roughness 0.4'),
-  termCmd('harness-blender material assign scene.blend Body PBR'),
+  termCmd('harnessgg-blender object add scene.blend CUBE --name "Body" --location-json "[0,0,0]"'),
+  termCmd('harnessgg-blender material create scene.blend PBR --base-color "#4a7aaa" --roughness 0.4'),
+  termCmd('harnessgg-blender material assign scene.blend Body PBR'),
   nl,
   comment('# 5. Add a camera and light, then render'),
-  termCmd('harness-blender camera add scene.blend --name "MainCam" --location-json "[5,5,3]"'),
-  termCmd('harness-blender camera set-active scene.blend MainCam'),
-  termCmd('harness-blender light add scene.blend SUN --name "Key" --energy 5.0'),
-  termCmd('harness-blender render still scene.blend out.png --engine CYCLES --samples 128'),
+  termCmd('harnessgg-blender camera add scene.blend --name "MainCam" --location-json "[5,5,3]"'),
+  termCmd('harnessgg-blender camera set-active scene.blend MainCam'),
+  termCmd('harnessgg-blender light add scene.blend SUN --name "Key" --energy 5.0'),
+  termCmd('harnessgg-blender render still scene.blend out.png --engine CYCLES --samples 128'),
   json('{"ok":true,"protocolVersion":"1.0","command":"render still","data":{"jobId":"job_r1","status":"queued"}}'),
-  termCmd('harness-blender render status job_r1'),
+  termCmd('harnessgg-blender render status job_r1'),
 ].join('\n');
 
 const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"render still","data":{"jobId":"job_r1","status":"queued"}}');
@@ -50,7 +50,7 @@ type Command = { name: string; synopsis: string; description: string; flags: Fla
 const bridgeCommands: Command[] = [
   {
     name: 'bridge start',
-    synopsis: 'harness-blender bridge start [--host 127.0.0.1] [--port 41749]',
+    synopsis: 'harnessgg-blender bridge start [--host 127.0.0.1] [--port 41749]',
     description: 'Start the local bridge server on port 41749. Must be running before any file, object, render, or other commands.',
     flags: [
       { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
@@ -59,25 +59,25 @@ const bridgeCommands: Command[] = [
   },
   {
     name: 'bridge serve',
-    synopsis: 'harness-blender bridge serve',
+    synopsis: 'harnessgg-blender bridge serve',
     description: 'Run the bridge in the foreground without daemonizing. Useful for debugging or containerized environments.',
     flags: [],
   },
   {
     name: 'bridge stop',
-    synopsis: 'harness-blender bridge stop',
+    synopsis: 'harnessgg-blender bridge stop',
     description: 'Shut down the running bridge server.',
     flags: [],
   },
   {
     name: 'bridge status',
-    synopsis: 'harness-blender bridge status',
+    synopsis: 'harnessgg-blender bridge status',
     description: 'Check whether the bridge is reachable and healthy. Run before any mutating command.',
     flags: [],
   },
   {
     name: 'bridge verify',
-    synopsis: 'harness-blender bridge verify [--iterations 25] [--max-failures 0]',
+    synopsis: 'harnessgg-blender bridge verify [--iterations 25] [--max-failures 0]',
     description: 'Run a stability check against the bridge. Recommended before long editing or render sessions.',
     flags: [
       { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 25)' },
@@ -89,13 +89,13 @@ const bridgeCommands: Command[] = [
 const systemCommands: Command[] = [
   {
     name: 'version',
-    synopsis: 'harness-blender version',
+    synopsis: 'harnessgg-blender version',
     description: 'Print the installed harnessgg-blender version. Does not require a running bridge.',
     flags: [],
   },
   {
     name: 'doctor',
-    synopsis: 'harness-blender doctor [--include-render]',
+    synopsis: 'harnessgg-blender doctor [--include-render]',
     description: 'Check that Blender is installed, the bridge is reachable, and the environment is healthy.',
     flags: [
       { flag: '--include-render', req: false, desc: 'Also verify that rendering is functional' },
@@ -103,7 +103,7 @@ const systemCommands: Command[] = [
   },
   {
     name: 'actions',
-    synopsis: 'harness-blender actions',
+    synopsis: 'harnessgg-blender actions',
     description: 'List all available commands and subcommand groups supported by the bridge.',
     flags: [],
   },
@@ -112,7 +112,7 @@ const systemCommands: Command[] = [
 const fileCommands: Command[] = [
   {
     name: 'file new',
-    synopsis: 'harness-blender file new <output.blend> [--overwrite]',
+    synopsis: 'harnessgg-blender file new <output.blend> [--overwrite]',
     description: 'Create a new empty Blender project file at the given path.',
     flags: [
       { flag: '--overwrite', req: false, desc: 'Replace an existing file at the target path' },
@@ -120,7 +120,7 @@ const fileCommands: Command[] = [
   },
   {
     name: 'file copy',
-    synopsis: 'harness-blender file copy <source> <target> [--overwrite]',
+    synopsis: 'harnessgg-blender file copy <source> <target> [--overwrite]',
     description: 'Duplicate a .blend file to a new location.',
     flags: [
       { flag: '--overwrite', req: false, desc: 'Replace an existing file at the target path' },
@@ -128,31 +128,31 @@ const fileCommands: Command[] = [
   },
   {
     name: 'file inspect',
-    synopsis: 'harness-blender file inspect <project.blend>',
+    synopsis: 'harnessgg-blender file inspect <project.blend>',
     description: 'Return a structured summary of the project: objects, materials, cameras, lights, and scene settings.',
     flags: [],
   },
   {
     name: 'file validate',
-    synopsis: 'harness-blender file validate <project.blend>',
+    synopsis: 'harnessgg-blender file validate <project.blend>',
     description: 'Validate the project structure. Run before renders and after destructive edits.',
     flags: [],
   },
   {
     name: 'file diff',
-    synopsis: 'harness-blender file diff <source> <target>',
+    synopsis: 'harnessgg-blender file diff <source> <target>',
     description: 'Compare two .blend files and report structural differences.',
     flags: [],
   },
   {
     name: 'file snapshot',
-    synopsis: 'harness-blender file snapshot <project> <description>',
+    synopsis: 'harnessgg-blender file snapshot <project> <description>',
     description: 'Save a named checkpoint of the project. Use before risky edits; restore with file undo.',
     flags: [],
   },
   {
     name: 'file undo / file redo',
-    synopsis: 'harness-blender file undo <project> [--snapshot-id <id>]\nharness-blender file redo <project>',
+    synopsis: 'harnessgg-blender file undo <project> [--snapshot-id <id>]\nharnessgg-blender file redo <project>',
     description: 'Undo the last edit or redo it. Pass --snapshot-id to jump to a specific named checkpoint.',
     flags: [
       { flag: '--snapshot-id', req: false, desc: 'Target snapshot identifier (undo only)' },
@@ -163,7 +163,7 @@ const fileCommands: Command[] = [
 const objectCommands: Command[] = [
   {
     name: 'object list',
-    synopsis: 'harness-blender object list <project> [--type MESH|CAMERA|LIGHT]',
+    synopsis: 'harnessgg-blender object list <project> [--type MESH|CAMERA|LIGHT]',
     description: 'List all objects in the scene, optionally filtered by type.',
     flags: [
       { flag: '--type', req: false, desc: 'Filter: MESH, CAMERA, or LIGHT' },
@@ -171,7 +171,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object add',
-    synopsis: 'harness-blender object add <project> CUBE|SPHERE|CYLINDER|PLANE|CONE|TORUS [--name <s>] [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
+    synopsis: 'harnessgg-blender object add <project> CUBE|SPHERE|CYLINDER|PLANE|CONE|TORUS [--name <s>] [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
     description: 'Add a primitive mesh object to the scene.',
     flags: [
       { flag: '--name',          req: false, desc: 'Object name (auto-generated if omitted)' },
@@ -183,7 +183,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object transform',
-    synopsis: 'harness-blender object transform <project> <name> [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
+    synopsis: 'harnessgg-blender object transform <project> <name> [--location-json <json>] [--rotation-json <json>] [--scale-json <json>] [--output <path>]',
     description: 'Set the location, rotation, or scale of a named object.',
     flags: [
       { flag: '--location-json', req: false, desc: 'New XYZ position' },
@@ -194,7 +194,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object delete',
-    synopsis: 'harness-blender object delete <project> <name> [--output <path>]',
+    synopsis: 'harnessgg-blender object delete <project> <name> [--output <path>]',
     description: 'Remove a named object from the scene.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -202,7 +202,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object duplicate',
-    synopsis: 'harness-blender object duplicate <project> <name> [--new-name <s>] [--output <path>]',
+    synopsis: 'harnessgg-blender object duplicate <project> <name> [--new-name <s>] [--output <path>]',
     description: 'Duplicate an object in the scene.',
     flags: [
       { flag: '--new-name', req: false, desc: 'Name for the duplicated object' },
@@ -211,7 +211,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object rename',
-    synopsis: 'harness-blender object rename <project> <name> <new-name> [--output <path>]',
+    synopsis: 'harnessgg-blender object rename <project> <name> <new-name> [--output <path>]',
     description: 'Rename an object.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -219,7 +219,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object parent / object unparent',
-    synopsis: 'harness-blender object parent <project> <child> <parent> [--output <path>]\nharness-blender object unparent <project> <child> [--output <path>]',
+    synopsis: 'harnessgg-blender object parent <project> <child> <parent> [--output <path>]\nharnessgg-blender object unparent <project> <child> [--output <path>]',
     description: 'Set or clear the parent of an object.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -227,7 +227,7 @@ const objectCommands: Command[] = [
   },
   {
     name: 'object shade-smooth / object shade-flat',
-    synopsis: 'harness-blender object shade-smooth <project> <name> [--output <path>]\nharness-blender object shade-flat <project> <name> [--output <path>]',
+    synopsis: 'harnessgg-blender object shade-smooth <project> <name> [--output <path>]\nharnessgg-blender object shade-flat <project> <name> [--output <path>]',
     description: 'Set smooth or flat shading on a mesh object.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -238,13 +238,13 @@ const objectCommands: Command[] = [
 const cameraLightCommands: Command[] = [
   {
     name: 'camera list',
-    synopsis: 'harness-blender camera list <project>',
+    synopsis: 'harnessgg-blender camera list <project>',
     description: 'List all cameras in the scene.',
     flags: [],
   },
   {
     name: 'camera add',
-    synopsis: 'harness-blender camera add <project> [--name <s>] [--location-json <json>] [--rotation-json <json>] [--output <path>]',
+    synopsis: 'harnessgg-blender camera add <project> [--name <s>] [--location-json <json>] [--rotation-json <json>] [--output <path>]',
     description: 'Add a new camera to the scene.',
     flags: [
       { flag: '--name',          req: false, desc: 'Camera name' },
@@ -255,7 +255,7 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'camera set-active',
-    synopsis: 'harness-blender camera set-active <project> <name> [--output <path>]',
+    synopsis: 'harnessgg-blender camera set-active <project> <name> [--output <path>]',
     description: 'Set the named camera as the active render camera.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -263,7 +263,7 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'camera set-lens',
-    synopsis: 'harness-blender camera set-lens <project> <name> <lens_mm> [--output <path>]',
+    synopsis: 'harnessgg-blender camera set-lens <project> <name> <lens_mm> [--output <path>]',
     description: 'Set the focal length of a camera in millimetres.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -271,7 +271,7 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'camera set-dof',
-    synopsis: 'harness-blender camera set-dof <project> <name> [--use-dof] [--focus-distance <f>] [--aperture-fstop <f>] [--focus-object <s>] [--output <path>]',
+    synopsis: 'harnessgg-blender camera set-dof <project> <name> [--use-dof] [--focus-distance <f>] [--aperture-fstop <f>] [--focus-object <s>] [--output <path>]',
     description: 'Configure depth-of-field for a camera.',
     flags: [
       { flag: '--use-dof',        req: false, desc: 'Enable depth-of-field' },
@@ -283,7 +283,7 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'light add',
-    synopsis: 'harness-blender light add <project> POINT|SUN|SPOT|AREA [--name <s>] [--energy 1000.0] [--color <hex>] [--location-json <json>] [--output <path>]',
+    synopsis: 'harnessgg-blender light add <project> POINT|SUN|SPOT|AREA [--name <s>] [--energy 1000.0] [--color <hex>] [--location-json <json>] [--output <path>]',
     description: 'Add a light of the specified type to the scene.',
     flags: [
       { flag: '--name',          req: false, desc: 'Light name' },
@@ -295,13 +295,13 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'light list',
-    synopsis: 'harness-blender light list <project>',
+    synopsis: 'harnessgg-blender light list <project>',
     description: 'List all lights in the scene.',
     flags: [],
   },
   {
     name: 'light set-energy',
-    synopsis: 'harness-blender light set-energy <project> <name> <energy> [--output <path>]',
+    synopsis: 'harnessgg-blender light set-energy <project> <name> <energy> [--output <path>]',
     description: 'Set the power of a light in watts.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -309,7 +309,7 @@ const cameraLightCommands: Command[] = [
   },
   {
     name: 'light set-color',
-    synopsis: 'harness-blender light set-color <project> <name> <hex> [--output <path>]',
+    synopsis: 'harnessgg-blender light set-color <project> <name> <hex> [--output <path>]',
     description: 'Set the colour of a light using a hex string.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -320,13 +320,13 @@ const cameraLightCommands: Command[] = [
 const materialModifierCommands: Command[] = [
   {
     name: 'material list',
-    synopsis: 'harness-blender material list <project>',
+    synopsis: 'harnessgg-blender material list <project>',
     description: 'List all materials defined in the project.',
     flags: [],
   },
   {
     name: 'material create',
-    synopsis: 'harness-blender material create <project> <name> [--base-color <hex>] [--metallic <f>] [--roughness <f>] [--output <path>]',
+    synopsis: 'harnessgg-blender material create <project> <name> [--base-color <hex>] [--metallic <f>] [--roughness <f>] [--output <path>]',
     description: 'Create a new Principled BSDF material.',
     flags: [
       { flag: '--base-color', req: false, desc: 'Base colour as hex, e.g. "#ffffff"' },
@@ -337,7 +337,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'material assign',
-    synopsis: 'harness-blender material assign <project> <object> <material> [--output <path>]',
+    synopsis: 'harnessgg-blender material assign <project> <object> <material> [--output <path>]',
     description: 'Assign a material to a named object.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -345,7 +345,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'material set-base-color',
-    synopsis: 'harness-blender material set-base-color <project> <name> <hex> [--output <path>]',
+    synopsis: 'harnessgg-blender material set-base-color <project> <name> <hex> [--output <path>]',
     description: 'Update the base colour of an existing material.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -353,7 +353,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'material set-metallic',
-    synopsis: 'harness-blender material set-metallic <project> <name> <value> [--output <path>]',
+    synopsis: 'harnessgg-blender material set-metallic <project> <name> <value> [--output <path>]',
     description: 'Set the metallic value (0.0 to 1.0) of a material.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -361,7 +361,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'material set-roughness',
-    synopsis: 'harness-blender material set-roughness <project> <name> <value> [--output <path>]',
+    synopsis: 'harnessgg-blender material set-roughness <project> <name> <value> [--output <path>]',
     description: 'Set the roughness value (0.0 to 1.0) of a material.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -369,13 +369,13 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'modifier list',
-    synopsis: 'harness-blender modifier list <project> <object>',
+    synopsis: 'harnessgg-blender modifier list <project> <object>',
     description: 'List all modifiers on a named object.',
     flags: [],
   },
   {
     name: 'modifier add',
-    synopsis: 'harness-blender modifier add <project> <object> <type> [--modifier-name <s>] [--output <path>]',
+    synopsis: 'harnessgg-blender modifier add <project> <object> <type> [--modifier-name <s>] [--output <path>]',
     description: 'Add a modifier of the given type to an object (e.g. SUBSURF, SOLIDIFY, ARRAY).',
     flags: [
       { flag: '--modifier-name', req: false, desc: 'Name for the new modifier' },
@@ -384,7 +384,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'modifier remove',
-    synopsis: 'harness-blender modifier remove <project> <object> <name> [--output <path>]',
+    synopsis: 'harnessgg-blender modifier remove <project> <object> <name> [--output <path>]',
     description: 'Remove a named modifier from an object.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -392,7 +392,7 @@ const materialModifierCommands: Command[] = [
   },
   {
     name: 'modifier apply',
-    synopsis: 'harness-blender modifier apply <project> <object> <name> [--output <path>]',
+    synopsis: 'harnessgg-blender modifier apply <project> <object> <name> [--output <path>]',
     description: 'Apply a modifier permanently, baking its effect into the mesh.',
     flags: [
       { flag: '--output', req: false, desc: 'Write to a different output path' },
@@ -403,7 +403,7 @@ const materialModifierCommands: Command[] = [
 const importExportCommands: Command[] = [
   {
     name: 'import gltf|fbx|obj|usd',
-    synopsis: 'harness-blender import gltf|fbx|obj|usd <project> <source> [--output <path>]',
+    synopsis: 'harnessgg-blender import gltf|fbx|obj|usd <project> <source> [--output <path>]',
     description: 'Import a mesh or scene file into the project. Supports glTF, FBX, OBJ, and USD formats. Timeout: 300s.',
     flags: [
       { flag: '--output', req: false, desc: 'Write the modified project to this path' },
@@ -411,7 +411,7 @@ const importExportCommands: Command[] = [
   },
   {
     name: 'export gltf|fbx|obj|usd',
-    synopsis: 'harness-blender export gltf|fbx|obj|usd <project> <target>',
+    synopsis: 'harnessgg-blender export gltf|fbx|obj|usd <project> <target>',
     description: 'Export the scene or selected objects to a file. Supports glTF, FBX, OBJ, and USD formats. Timeout: 300s.',
     flags: [],
   },
@@ -420,7 +420,7 @@ const importExportCommands: Command[] = [
 const renderCommands: Command[] = [
   {
     name: 'render still',
-    synopsis: 'harness-blender render still <project> <output.png> [--engine BLENDER_EEVEE|CYCLES] [--samples 64] [--resolution-x 1920] [--resolution-y 1080] [--camera <name>]',
+    synopsis: 'harnessgg-blender render still <project> <output.png> [--engine BLENDER_EEVEE|CYCLES] [--samples 64] [--resolution-x 1920] [--resolution-y 1080] [--camera <name>]',
     description: 'Render a single frame to a PNG file. Returns a job_id immediately. Poll render status for progress. Timeout: 600s.',
     flags: [
       { flag: '--engine',       req: false, desc: 'BLENDER_EEVEE or CYCLES (default: BLENDER_EEVEE)' },
@@ -432,7 +432,7 @@ const renderCommands: Command[] = [
   },
   {
     name: 'render animation',
-    synopsis: 'harness-blender render animation <project> <output_dir> [--engine BLENDER_EEVEE|CYCLES] [--frame-start 1] [--frame-end 250] [--fps 24] [--format PNG|JPEG|FFMPEG]',
+    synopsis: 'harnessgg-blender render animation <project> <output_dir> [--engine BLENDER_EEVEE|CYCLES] [--frame-start 1] [--frame-end 250] [--fps 24] [--format PNG|JPEG|FFMPEG]',
     description: 'Render an animation sequence to a directory. Returns a job_id. Timeout: 1800s.',
     flags: [
       { flag: '--engine',      req: false, desc: 'BLENDER_EEVEE or CYCLES' },
@@ -444,13 +444,13 @@ const renderCommands: Command[] = [
   },
   {
     name: 'render status',
-    synopsis: 'harness-blender render status <job_id>',
+    synopsis: 'harnessgg-blender render status <job_id>',
     description: 'Poll the status and progress of an active or completed render job.',
     flags: [],
   },
   {
     name: 'render cancel',
-    synopsis: 'harness-blender render cancel <job_id>',
+    synopsis: 'harnessgg-blender render cancel <job_id>',
     description: 'Cancel a queued or running render job.',
     flags: [],
   },
@@ -516,7 +516,7 @@ const errorCodes = [
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="term-title">terminal</span>
       </div>
-      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-blender bridge start`}></pre>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harnessgg-blender bridge start`}></pre>
     </div>
     <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> (exit 5) with backoff 0.5s, 1s, 2s.</p>
   </section>

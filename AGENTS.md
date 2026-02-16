@@ -31,17 +31,17 @@ npx astro check
 **Pages:**
 - `/` — hub: hero with animated install cycler, package list, agent discovery strip
 - `/electron` — full docs for `@harnessgg/electron` (npm)
-- `/kdenlive` — full docs for `harness-kdenlive` (pip)
+- `/kdenlive` — full docs for `harnessgg-kdenlive` (pip)
 - `/llms.txt` — plain-text agent discovery index (SSR endpoint)
 - `/packages.json` — structured package registry (SSR endpoint)
 - `POST /api/submit` — creates GitHub Issues via the GitHub API; requires `GITHUB_TOKEN` env var
 
 **Packages (index.astro):**
 - `@harnessgg/electron` v0.1.0 — published, npm, page at `/electron`
-- `harness-kdenlive` v0.3.0 — published, pip, page at `/kdenlive`
+- `harnessgg-kdenlive` v0.3.0 — published, pip, page at `/kdenlive`
 - `@harnessgg/web` — coming soon, npm
-- `harness-blender` — coming soon
-- `harness-gimp` — coming soon
+- `harnessgg-blender` — coming soon
+- `harnessgg-gimp` — coming soon
 
 **Design system — Ocean Slate:**
 All colour tokens are oklch values defined in `src/styles/global.css` under `:root`. Key values: `--primary: #5a7a8a`, `--background: #f2f4f6`, `--term-bg: #1e2830`. Do not use hardcoded hex for these; use the CSS variables.

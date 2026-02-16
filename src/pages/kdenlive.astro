@@ -16,26 +16,26 @@ const nl = '\n';
 
 const quickFlowHtml = [
   comment('# 1. Start the bridge'),
-  termCmd('harness-kdenlive bridge start'),
+  termCmd('harnessgg-kdenlive bridge start'),
   nl,
   comment('# 2. Verify stability'),
-  termCmd('harness-kdenlive bridge status'),
-  termCmd('harness-kdenlive bridge verify --iterations 25'),
+  termCmd('harnessgg-kdenlive bridge status'),
+  termCmd('harnessgg-kdenlive bridge verify --iterations 25'),
   nl,
   comment('# 3. Create a project and import media'),
-  termCmd('harness-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite'),
-  termCmd('harness-kdenlive import-asset edit.kdenlive clip.mp4 --producer-id clip1'),
+  termCmd('harnessgg-kdenlive create-project edit.kdenlive --title "Agent Edit" --overwrite'),
+  termCmd('harnessgg-kdenlive import-asset edit.kdenlive clip.mp4 --producer-id clip1'),
   json('{"ok":true,"protocolVersion":"1.0","command":"import-asset","data":{"producerId":"clip1"}}'),
   nl,
   comment('# 4. Build the timeline'),
-  termCmd('harness-kdenlive add-text edit.kdenlive "Opening Title" --duration-frames 75 --track-id playlist0 --position 0'),
-  termCmd('harness-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10'),
+  termCmd('harnessgg-kdenlive add-text edit.kdenlive "Opening Title" --duration-frames 75 --track-id playlist0 --position 0'),
+  termCmd('harnessgg-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10'),
   nl,
   comment('# 5. Validate then render'),
-  termCmd('harness-kdenlive validate edit.kdenlive'),
-  termCmd('harness-kdenlive render-project edit.kdenlive output.mp4'),
+  termCmd('harnessgg-kdenlive validate edit.kdenlive'),
+  termCmd('harnessgg-kdenlive render-project edit.kdenlive output.mp4'),
   json('{"ok":true,"protocolVersion":"1.0","command":"render-project","data":{"jobId":"job_abc"}}'),
-  termCmd('harness-kdenlive render-status job_abc'),
+  termCmd('harnessgg-kdenlive render-status job_abc'),
 ].join('\n');
 
 const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"import-asset","data":{"producerId":"clip1"}}');
@@ -47,7 +47,7 @@ type Command = { name: string; synopsis: string; description: string; flags: Fla
 const bridgeCommands: Command[] = [
   {
     name: 'bridge start',
-    synopsis: 'harness-kdenlive bridge start [--host <ip>] [--port <n>]',
+    synopsis: 'harnessgg-kdenlive bridge start [--host <ip>] [--port <n>]',
     description: 'Start the local bridge server. Must be running before any editing commands.',
     flags: [
       { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
@@ -56,13 +56,13 @@ const bridgeCommands: Command[] = [
   },
   {
     name: 'bridge status',
-    synopsis: 'harness-kdenlive bridge status',
+    synopsis: 'harnessgg-kdenlive bridge status',
     description: 'Check whether the bridge is reachable and healthy. Run before mutating commands.',
     flags: [],
   },
   {
     name: 'bridge verify',
-    synopsis: 'harness-kdenlive bridge verify [--iterations <n>] [--max-failures <n>]',
+    synopsis: 'harnessgg-kdenlive bridge verify [--iterations <n>] [--max-failures <n>]',
     description: 'Run a stability check against the bridge. Recommended before long editing sessions.',
     flags: [
       { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 25)' },
@@ -71,7 +71,7 @@ const bridgeCommands: Command[] = [
   },
   {
     name: 'bridge stop',
-    synopsis: 'harness-kdenlive bridge stop',
+    synopsis: 'harnessgg-kdenlive bridge stop',
     description: 'Shut down the bridge server.',
     flags: [],
   },
@@ -80,7 +80,7 @@ const bridgeCommands: Command[] = [
 const projectCommands: Command[] = [
   {
     name: 'create-project',
-    synopsis: 'harness-kdenlive create-project <output> [--title <s>] [--width <n>] [--height <n>] [--fps <f>] [--overwrite]',
+    synopsis: 'harnessgg-kdenlive create-project <output> [--title <s>] [--width <n>] [--height <n>] [--fps <f>] [--overwrite]',
     description: 'Create a new Kdenlive project file.',
     flags: [
       { flag: '--title',    req: false, desc: 'Project title' },
@@ -92,7 +92,7 @@ const projectCommands: Command[] = [
   },
   {
     name: 'import-asset',
-    synopsis: 'harness-kdenlive import-asset <project> <media> [--producer-id <id>] [--dry-run]',
+    synopsis: 'harnessgg-kdenlive import-asset <project> <media> [--producer-id <id>] [--dry-run]',
     description: 'Import a media file into the project bin.',
     flags: [
       { flag: '--producer-id', req: false, desc: 'Stable ID to reference this clip in other commands' },
@@ -101,13 +101,13 @@ const projectCommands: Command[] = [
   },
   {
     name: 'inspect',
-    synopsis: 'harness-kdenlive inspect <project>',
+    synopsis: 'harnessgg-kdenlive inspect <project>',
     description: 'Return a structured summary of the project — tracks, clips, duration.',
     flags: [],
   },
   {
     name: 'validate',
-    synopsis: 'harness-kdenlive validate <project> [--check-files]',
+    synopsis: 'harnessgg-kdenlive validate <project> [--check-files]',
     description: 'Validate project structure. Run before renders and after destructive edits.',
     flags: [
       { flag: '--check-files / --no-check-files', req: false, desc: 'Verify referenced media files exist (default: on)' },
@@ -115,13 +115,13 @@ const projectCommands: Command[] = [
   },
   {
     name: 'snapshot',
-    synopsis: 'harness-kdenlive snapshot <project> <description>',
+    synopsis: 'harnessgg-kdenlive snapshot <project> <description>',
     description: 'Save a named checkpoint. Use before risky edits; restore with undo.',
     flags: [],
   },
   {
     name: 'undo / redo',
-    synopsis: 'harness-kdenlive undo <project> [--snapshot-id <id>]\nharness-kdenlive redo <project>',
+    synopsis: 'harnessgg-kdenlive undo <project> [--snapshot-id <id>]\nharnessgg-kdenlive redo <project>',
     description: 'Undo the last edit or redo it. Pass --snapshot-id to jump to a specific checkpoint.',
     flags: [
       { flag: '--snapshot-id', req: false, desc: 'Target snapshot (undo only)' },
@@ -132,7 +132,7 @@ const projectCommands: Command[] = [
 const timelineCommands: Command[] = [
   {
     name: 'add-clip',
-    synopsis: 'harness-kdenlive add-clip <project> <clip_id> <track_id> <position> [--in-point <n>] [--out-point <n>] [--dry-run]',
+    synopsis: 'harnessgg-kdenlive add-clip <project> <clip_id> <track_id> <position> [--in-point <n>] [--out-point <n>] [--dry-run]',
     description: 'Place a clip on a track at the given frame position.',
     flags: [
       { flag: '--in-point / --out-point', req: false, desc: 'Trim the clip source range' },
@@ -141,7 +141,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'move-clip',
-    synopsis: 'harness-kdenlive move-clip <project> <clip_ref> <track_id> <position> [--dry-run]',
+    synopsis: 'harnessgg-kdenlive move-clip <project> <clip_ref> <track_id> <position> [--dry-run]',
     description: 'Move a clip to a new track or position.',
     flags: [
       { flag: '--dry-run', req: false, desc: 'Preview without writing' },
@@ -149,7 +149,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'trim-clip',
-    synopsis: 'harness-kdenlive trim-clip <project> <clip_ref> [--in-point <n>] [--out-point <n>]',
+    synopsis: 'harnessgg-kdenlive trim-clip <project> <clip_ref> [--in-point <n>] [--out-point <n>]',
     description: 'Adjust a clip\'s in/out points.',
     flags: [
       { flag: '--in-point',  req: false, desc: 'New in-point frame' },
@@ -158,19 +158,19 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'split-clip',
-    synopsis: 'harness-kdenlive split-clip <project> <clip_ref> <position>',
+    synopsis: 'harnessgg-kdenlive split-clip <project> <clip_ref> <position>',
     description: 'Split a clip at the given frame, producing two clips.',
     flags: [],
   },
   {
     name: 'ripple-delete',
-    synopsis: 'harness-kdenlive ripple-delete <project> <clip_ref>',
+    synopsis: 'harnessgg-kdenlive ripple-delete <project> <clip_ref>',
     description: 'Remove a clip and close the gap by shifting downstream clips.',
     flags: [],
   },
   {
     name: 'stitch-clips',
-    synopsis: 'harness-kdenlive stitch-clips <project> <track_id> <clip_id...> [--position <n>] [--gap <n>]',
+    synopsis: 'harnessgg-kdenlive stitch-clips <project> <track_id> <clip_id...> [--position <n>] [--gap <n>]',
     description: 'Place a sequence of clips end-to-end on a track.',
     flags: [
       { flag: '--position', req: false, desc: 'Start frame (default: 0)' },
@@ -179,7 +179,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'add-text',
-    synopsis: 'harness-kdenlive add-text <project> <text> [--duration-frames <n>] [--track-id <id>] [--position <n>] [--font <s>] [--size <n>] [--color <hex>]',
+    synopsis: 'harnessgg-kdenlive add-text <project> <text> [--duration-frames <n>] [--track-id <id>] [--position <n>] [--font <s>] [--size <n>] [--color <hex>]',
     description: 'Insert a text title clip.',
     flags: [
       { flag: '--duration-frames', req: false, desc: 'Length in frames' },
@@ -190,7 +190,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'add-track',
-    synopsis: 'harness-kdenlive add-track <project> [--track-type video|audio] [--name <s>] [--index <n>]',
+    synopsis: 'harnessgg-kdenlive add-track <project> [--track-type video|audio] [--name <s>] [--index <n>]',
     description: 'Add a new video or audio track.',
     flags: [
       { flag: '--track-type', req: false, desc: 'video | audio' },
@@ -200,7 +200,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'apply-effect',
-    synopsis: 'harness-kdenlive apply-effect <project> <clip_ref> <service> [--properties-json <json>]',
+    synopsis: 'harnessgg-kdenlive apply-effect <project> <clip_ref> <service> [--properties-json <json>]',
     description: 'Apply an MLT effect service to a clip.',
     flags: [
       { flag: '--effect-id',       req: false, desc: 'Explicit ID for later reference' },
@@ -209,7 +209,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'apply-transition',
-    synopsis: 'harness-kdenlive apply-transition <project> [--in-frame <n>] [--out-frame <n>] [--service <s>]',
+    synopsis: 'harnessgg-kdenlive apply-transition <project> [--in-frame <n>] [--out-frame <n>] [--service <s>]',
     description: 'Add a transition between two clips.',
     flags: [
       { flag: '--in-frame / --out-frame', req: false, desc: 'Transition range' },
@@ -218,7 +218,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'grade-clip',
-    synopsis: 'harness-kdenlive grade-clip <project> <clip_ref> [--lift <f>] [--gamma <f>] [--gain <f>] [--saturation <f>] [--lut-path <path>]',
+    synopsis: 'harnessgg-kdenlive grade-clip <project> <clip_ref> [--lift <f>] [--gamma <f>] [--gain <f>] [--saturation <f>] [--lut-path <path>]',
     description: 'Apply a colour grade to a clip.',
     flags: [
       { flag: '--lift / --gamma / --gain / --saturation', req: false, desc: 'Grade parameters (-1.0 to 1.0)' },
@@ -227,7 +227,7 @@ const timelineCommands: Command[] = [
   },
   {
     name: 'duck-audio',
-    synopsis: 'harness-kdenlive duck-audio <project> <track_id> [--duck-gain <f>]',
+    synopsis: 'harnessgg-kdenlive duck-audio <project> <track_id> [--duck-gain <f>]',
     description: 'Apply audio ducking to a track.',
     flags: [
       { flag: '--duck-gain', req: false, desc: 'Gain reduction factor (default: 0.2)' },
@@ -238,7 +238,7 @@ const timelineCommands: Command[] = [
 const renderCommands: Command[] = [
   {
     name: 'render-project',
-    synopsis: 'harness-kdenlive render-project <project.kdenlive> <output.mp4> [--start-seconds <f>] [--duration-seconds <f>] [--preset-name h264|hevc|prores]',
+    synopsis: 'harnessgg-kdenlive render-project <project.kdenlive> <output.mp4> [--start-seconds <f>] [--duration-seconds <f>] [--preset-name h264|hevc|prores]',
     description: 'Render the full project or a zone to a video file. Returns a job ID — poll render-status for progress.',
     flags: [
       { flag: '--start-seconds / --duration-seconds', req: false, desc: 'Render a subrange' },
@@ -248,7 +248,7 @@ const renderCommands: Command[] = [
   },
   {
     name: 'render-clip',
-    synopsis: 'harness-kdenlive render-clip <source.mp4> <output.mp4> <duration_seconds> [--start-seconds <f>] [--preset-name h264|hevc|prores]',
+    synopsis: 'harnessgg-kdenlive render-clip <source.mp4> <output.mp4> <duration_seconds> [--start-seconds <f>] [--preset-name h264|hevc|prores]',
     description: 'Render a standalone clip segment without a project file.',
     flags: [
       { flag: '--start-seconds', req: false, desc: 'Clip start offset' },
@@ -257,7 +257,7 @@ const renderCommands: Command[] = [
   },
   {
     name: 'render-status',
-    synopsis: 'harness-kdenlive render-status <job_id>',
+    synopsis: 'harnessgg-kdenlive render-status <job_id>',
     description: 'Poll the status and progress of a render job.',
     flags: [],
   },
@@ -305,7 +305,7 @@ const errorCodes = [
       <a href="https://pypi.org/project/harnessgg-kdenlive/" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
       </a>
-      <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">
+      <a href="https://github.com/harnessgg/Harness-kdenlive" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
       </a>
     </div>
@@ -323,7 +323,7 @@ const errorCodes = [
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="term-title">terminal</span>
       </div>
-      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-kdenlive bridge start`}></pre>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harnessgg-kdenlive bridge start`}></pre>
     </div>
     <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> — backoff 0.5s, 1s, 2s.</p>
   </section>
@@ -561,7 +561,7 @@ const errorCodes = [
     <h2>Submit feedback</h2>
     <p class="sec-intro">
       Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
-      Issues land on <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">harnessgg/Harness-kdenlive</a>.
+      Issues land on <a href="https://github.com/harnessgg/Harness-kdenlive" target="_blank" rel="noopener">harnessgg/Harness-kdenlive</a>.
     </p>
 
     <table class="flag-table" style="margin-bottom: 1.5rem">

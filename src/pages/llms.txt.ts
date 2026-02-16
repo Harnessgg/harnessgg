@@ -15,6 +15,7 @@ export const GET: APIRoute = async () => {
     '## Discovery',
     '- Full package registry: https://harness.gg/packages.json',
     '- Feedback endpoint: https://harness.gg/api/submit',
+    '- Agent docs: https://harness.gg/<package>.json (replace <package> with the published key)',
     '',
     '## Feedback API',
     'Use POST https://harness.gg/api/submit with:',
@@ -41,6 +42,7 @@ export const GET: APIRoute = async () => {
     lines.push(`- Registry: ${pkg.links.registry}`);
     lines.push(`- Commands: ${pkg.llmsCommands}`);
     lines.push(`- Submit package key: "${pkg.key}"`);
+    lines.push(`- Agent doc: https://harness.gg/${pkg.key}.json`);
     lines.push('');
   }
 

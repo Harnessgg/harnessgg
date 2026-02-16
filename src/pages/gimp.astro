@@ -16,26 +16,26 @@ const nl = '\n';
 
 const quickFlowHtml = [
   comment('# 1. Start the bridge'),
-  termCmd('harness-gimp bridge start'),
+  termCmd('harnessgg-gimp bridge start'),
   nl,
   comment('# 2. Inspect the image'),
-  termCmd('harness-gimp inspect photo.png'),
+  termCmd('harnessgg-gimp inspect photo.png'),
   json('{"ok":true,"protocolVersion":"1.0","command":"inspect","data":{"width":3840,"height":2160,"layers":1}}'),
   nl,
   comment('# 3. Resize it'),
-  termCmd('harness-gimp resize photo.png --width 1920 --height 1080 --output resized.png'),
+  termCmd('harnessgg-gimp resize photo.png --width 1920 --height 1080 --output resized.png'),
   json('{"ok":true,"protocolVersion":"1.0","command":"resize","data":{}}'),
   nl,
   comment('# 4. Adjust brightness and contrast'),
-  termCmd('harness-gimp brightness-contrast resized.png --brightness 0.1 --contrast 0.2 --output adjusted.png'),
+  termCmd('harnessgg-gimp brightness-contrast resized.png --brightness 0.1 --contrast 0.2 --output adjusted.png'),
   json('{"ok":true,"protocolVersion":"1.0","command":"brightness-contrast","data":{}}'),
   nl,
   comment('# 5. Apply a gaussian blur'),
-  termCmd('harness-gimp gaussian-blur adjusted.png --radius-x 2.0 --radius-y 2.0 --output blurred.png'),
+  termCmd('harnessgg-gimp gaussian-blur adjusted.png --radius-x 2.0 --radius-y 2.0 --output blurred.png'),
   json('{"ok":true,"protocolVersion":"1.0","command":"gaussian-blur","data":{}}'),
   nl,
   comment('# 6. Export as JPEG'),
-  termCmd('harness-gimp export blurred.png final.jpg'),
+  termCmd('harnessgg-gimp export blurred.png final.jpg'),
   json('{"ok":true,"protocolVersion":"1.0","command":"export","data":{"output":"final.jpg"}}'),
 ].join('\n');
 
@@ -48,7 +48,7 @@ type Command = { name: string; synopsis: string; description: string; flags: Fla
 const bridgeCommands: Command[] = [
   {
     name: 'bridge start',
-    synopsis: 'harness-gimp bridge start [--host 127.0.0.1] [--port 41749]',
+    synopsis: 'harnessgg-gimp bridge start [--host 127.0.0.1] [--port 41749]',
     description: 'Start the local bridge server on port 41749. Must be running before any image editing commands.',
     flags: [
       { flag: '--host', req: false, desc: 'Bind address (default: 127.0.0.1)' },
@@ -57,25 +57,25 @@ const bridgeCommands: Command[] = [
   },
   {
     name: 'bridge serve',
-    synopsis: 'harness-gimp bridge serve',
+    synopsis: 'harnessgg-gimp bridge serve',
     description: 'Run the bridge in the foreground (blocking). Useful for container environments.',
     flags: [],
   },
   {
     name: 'bridge stop',
-    synopsis: 'harness-gimp bridge stop',
+    synopsis: 'harnessgg-gimp bridge stop',
     description: 'Shut down the running bridge server.',
     flags: [],
   },
   {
     name: 'bridge status',
-    synopsis: 'harness-gimp bridge status',
+    synopsis: 'harnessgg-gimp bridge status',
     description: 'Check whether the bridge is reachable and healthy. Run before any mutating commands.',
     flags: [],
   },
   {
     name: 'bridge verify',
-    synopsis: 'harness-gimp bridge verify [--iterations 10] [--max-failures 0]',
+    synopsis: 'harnessgg-gimp bridge verify [--iterations 10] [--max-failures 0]',
     description: 'Run a stability check against the bridge. Recommended before long editing sessions.',
     flags: [
       { flag: '--iterations',   req: false, desc: 'Number of health pings (default: 10)' },
@@ -87,19 +87,19 @@ const bridgeCommands: Command[] = [
 const systemCommands: Command[] = [
   {
     name: 'version',
-    synopsis: 'harness-gimp version',
+    synopsis: 'harnessgg-gimp version',
     description: 'Print the package version. Does not require the bridge to be running.',
     flags: [],
   },
   {
     name: 'doctor',
-    synopsis: 'harness-gimp doctor',
+    synopsis: 'harnessgg-gimp doctor',
     description: 'Check the installation environment: GIMP availability, bridge connectivity, and Python version.',
     flags: [],
   },
   {
     name: 'actions',
-    synopsis: 'harness-gimp actions',
+    synopsis: 'harnessgg-gimp actions',
     description: 'List all available commands with their synopses. Useful for agent discovery.',
     flags: [],
   },
@@ -108,25 +108,25 @@ const systemCommands: Command[] = [
 const fileCommands: Command[] = [
   {
     name: 'open',
-    synopsis: 'harness-gimp open <image>',
+    synopsis: 'harnessgg-gimp open <image>',
     description: 'Open an image file through the bridge. Use before commands that require an open document context.',
     flags: [],
   },
   {
     name: 'save',
-    synopsis: 'harness-gimp save <image> <output>',
+    synopsis: 'harnessgg-gimp save <image> <output>',
     description: 'Save the image to a file path. Writes in the format inferred from the output extension.',
     flags: [],
   },
   {
     name: 'export',
-    synopsis: 'harness-gimp export <image> <output>',
+    synopsis: 'harnessgg-gimp export <image> <output>',
     description: 'Export the image, inferring format from the output file extension. Supported extensions: .jpg, .png, .webp, .xcf.',
     flags: [],
   },
   {
     name: 'clone-project',
-    synopsis: 'harness-gimp clone-project <source> <target> [--overwrite]',
+    synopsis: 'harnessgg-gimp clone-project <source> <target> [--overwrite]',
     description: 'Copy an image file to a new path. Use to create a working copy before destructive edits.',
     flags: [
       { flag: '--overwrite', req: false, desc: 'Replace target if it already exists' },
@@ -134,37 +134,37 @@ const fileCommands: Command[] = [
   },
   {
     name: 'inspect',
-    synopsis: 'harness-gimp inspect <image>',
+    synopsis: 'harnessgg-gimp inspect <image>',
     description: 'Return a structured summary of the image: dimensions, colour mode, layer count, and layer names.',
     flags: [],
   },
   {
     name: 'validate',
-    synopsis: 'harness-gimp validate <image>',
+    synopsis: 'harnessgg-gimp validate <image>',
     description: 'Check that the image file is readable and structurally valid. Run before a batch pipeline.',
     flags: [],
   },
   {
     name: 'diff',
-    synopsis: 'harness-gimp diff <source> <target>',
+    synopsis: 'harnessgg-gimp diff <source> <target>',
     description: 'Compare two image files and return a pixel-level difference summary.',
     flags: [],
   },
   {
     name: 'snapshot',
-    synopsis: 'harness-gimp snapshot <image> <description>',
+    synopsis: 'harnessgg-gimp snapshot <image> <description>',
     description: 'Save a named checkpoint of the image state. Use before risky edits; restore with undo.',
     flags: [],
   },
   {
     name: 'undo',
-    synopsis: 'harness-gimp undo <image>',
+    synopsis: 'harnessgg-gimp undo <image>',
     description: 'Undo the last edit applied to the image.',
     flags: [],
   },
   {
     name: 'redo',
-    synopsis: 'harness-gimp redo <image>',
+    synopsis: 'harnessgg-gimp redo <image>',
     description: 'Redo the last undone edit.',
     flags: [],
   },
@@ -173,7 +173,7 @@ const fileCommands: Command[] = [
 const transformCommands: Command[] = [
   {
     name: 'resize',
-    synopsis: 'harness-gimp resize <image> --width <int> --height <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp resize <image> --width <int> --height <int> [--output <path>]',
     description: 'Scale the image to the given dimensions. Overwrites the input file unless --output is specified.',
     flags: [
       { flag: '--width',  req: true,  desc: 'Target width in pixels' },
@@ -183,7 +183,7 @@ const transformCommands: Command[] = [
   },
   {
     name: 'crop',
-    synopsis: 'harness-gimp crop <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp crop <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
     description: 'Crop the image to the given rectangle.',
     flags: [
       { flag: '--x',      req: true,  desc: 'Left edge of the crop region in pixels' },
@@ -195,7 +195,7 @@ const transformCommands: Command[] = [
   },
   {
     name: 'rotate',
-    synopsis: 'harness-gimp rotate <image> --degrees 90|180|270 [--output <path>]',
+    synopsis: 'harnessgg-gimp rotate <image> --degrees 90|180|270 [--output <path>]',
     description: 'Rotate the image by a fixed angle. Only 90, 180, and 270 degree values are accepted.',
     flags: [
       { flag: '--degrees', req: true,  desc: '90, 180, or 270' },
@@ -204,7 +204,7 @@ const transformCommands: Command[] = [
   },
   {
     name: 'flip',
-    synopsis: 'harness-gimp flip <image> --axis horizontal|vertical [--output <path>]',
+    synopsis: 'harnessgg-gimp flip <image> --axis horizontal|vertical [--output <path>]',
     description: 'Flip the image along the horizontal or vertical axis.',
     flags: [
       { flag: '--axis',   req: true,  desc: 'horizontal or vertical' },
@@ -213,7 +213,7 @@ const transformCommands: Command[] = [
   },
   {
     name: 'canvas-size',
-    synopsis: 'harness-gimp canvas-size <image> --width <int> --height <int> [--offset-x <int>] [--offset-y <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp canvas-size <image> --width <int> --height <int> [--offset-x <int>] [--offset-y <int>] [--output <path>]',
     description: 'Resize the canvas without scaling the image content. Use offset flags to control where the existing content is positioned on the new canvas.',
     flags: [
       { flag: '--width',    req: true,  desc: 'New canvas width in pixels' },
@@ -228,7 +228,7 @@ const transformCommands: Command[] = [
 const colorCommands: Command[] = [
   {
     name: 'brightness-contrast',
-    synopsis: 'harness-gimp brightness-contrast <image> [--brightness <f>] [--contrast <f>] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp brightness-contrast <image> [--brightness <f>] [--contrast <f>] [--layer-index <int>] [--output <path>]',
     description: 'Adjust brightness and contrast on a layer. Values are floating-point offsets.',
     flags: [
       { flag: '--brightness',  req: false, desc: 'Brightness adjustment' },
@@ -239,7 +239,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'levels',
-    synopsis: 'harness-gimp levels <image> [--black <f>] [--white <f>] [--gamma <f>] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp levels <image> [--black <f>] [--white <f>] [--gamma <f>] [--layer-index <int>] [--output <path>]',
     description: 'Set input levels for black point, white point, and gamma on a layer.',
     flags: [
       { flag: '--black',       req: false, desc: 'Black input level' },
@@ -251,7 +251,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'curves',
-    synopsis: 'harness-gimp curves <image> --points-json <json> [--channel value|red|green|blue|alpha] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp curves <image> --points-json <json> [--channel value|red|green|blue|alpha] [--layer-index <int>] [--output <path>]',
     description: 'Apply a curves adjustment using control points provided as a JSON array. Use --channel to target a specific channel.',
     flags: [
       { flag: '--points-json',  req: true,  desc: 'JSON array of curve control points' },
@@ -262,7 +262,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'color-balance',
-    synopsis: 'harness-gimp color-balance <image> [--cyan-red <f>] [--magenta-green <f>] [--yellow-blue <f>] [--transfer-mode MIDTONES] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp color-balance <image> [--cyan-red <f>] [--magenta-green <f>] [--yellow-blue <f>] [--transfer-mode MIDTONES] [--layer-index <int>] [--output <path>]',
     description: 'Shift the colour balance of a layer across shadow, midtone, and highlight ranges.',
     flags: [
       { flag: '--cyan-red',      req: false, desc: 'Cyan-to-red shift' },
@@ -275,7 +275,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'hue-saturation',
-    synopsis: 'harness-gimp hue-saturation <image> [--hue <f>] [--saturation <f>] [--lightness <f>] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp hue-saturation <image> [--hue <f>] [--saturation <f>] [--lightness <f>] [--layer-index <int>] [--output <path>]',
     description: 'Adjust hue, saturation, and lightness on a layer.',
     flags: [
       { flag: '--hue',         req: false, desc: 'Hue rotation in degrees' },
@@ -287,7 +287,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'color-temperature',
-    synopsis: 'harness-gimp color-temperature <image> --temperature <f> [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp color-temperature <image> --temperature <f> [--layer-index <int>] [--output <path>]',
     description: 'Shift the colour temperature of a layer. Positive values are warmer, negative values are cooler.',
     flags: [
       { flag: '--temperature', req: true,  desc: 'Temperature shift value' },
@@ -297,7 +297,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'invert',
-    synopsis: 'harness-gimp invert <image> [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp invert <image> [--layer-index <int>] [--output <path>]',
     description: 'Invert the colours of a layer.',
     flags: [
       { flag: '--layer-index', req: false, desc: 'Target layer (default: 0)' },
@@ -306,7 +306,7 @@ const colorCommands: Command[] = [
   },
   {
     name: 'desaturate',
-    synopsis: 'harness-gimp desaturate <image> [--mode luma|average|lightness] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp desaturate <image> [--mode luma|average|lightness] [--layer-index <int>] [--output <path>]',
     description: 'Convert a layer to greyscale using the specified desaturation algorithm.',
     flags: [
       { flag: '--mode',        req: false, desc: 'luma, average, or lightness (default: luma)' },
@@ -319,7 +319,7 @@ const colorCommands: Command[] = [
 const filterCommands: Command[] = [
   {
     name: 'blur',
-    synopsis: 'harness-gimp blur <image> [--radius 4.0] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp blur <image> [--radius 4.0] [--layer-index <int>] [--output <path>]',
     description: 'Apply a simple blur filter to a layer.',
     flags: [
       { flag: '--radius',      req: false, desc: 'Blur radius (default: 4.0)' },
@@ -329,7 +329,7 @@ const filterCommands: Command[] = [
   },
   {
     name: 'gaussian-blur',
-    synopsis: 'harness-gimp gaussian-blur <image> [--radius-x 4.0] [--radius-y 4.0] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp gaussian-blur <image> [--radius-x 4.0] [--radius-y 4.0] [--layer-index <int>] [--output <path>]',
     description: 'Apply a Gaussian blur with independent horizontal and vertical radii.',
     flags: [
       { flag: '--radius-x',    req: false, desc: 'Horizontal blur radius (default: 4.0)' },
@@ -340,7 +340,7 @@ const filterCommands: Command[] = [
   },
   {
     name: 'sharpen',
-    synopsis: 'harness-gimp sharpen <image> [--radius 2.0] [--amount 1.0] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp sharpen <image> [--radius 2.0] [--amount 1.0] [--layer-index <int>] [--output <path>]',
     description: 'Apply a sharpen filter to a layer.',
     flags: [
       { flag: '--radius',      req: false, desc: 'Sharpen radius (default: 2.0)' },
@@ -351,7 +351,7 @@ const filterCommands: Command[] = [
   },
   {
     name: 'unsharp-mask',
-    synopsis: 'harness-gimp unsharp-mask <image> [--radius 2.0] [--amount 1.0] [--threshold 0.0] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp unsharp-mask <image> [--radius 2.0] [--amount 1.0] [--threshold 0.0] [--layer-index <int>] [--output <path>]',
     description: 'Apply an unsharp mask for controlled edge sharpening.',
     flags: [
       { flag: '--radius',      req: false, desc: 'Radius of the blur used in the mask (default: 2.0)' },
@@ -363,7 +363,7 @@ const filterCommands: Command[] = [
   },
   {
     name: 'noise-reduction',
-    synopsis: 'harness-gimp noise-reduction <image> [--strength 3] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp noise-reduction <image> [--strength 3] [--layer-index <int>] [--output <path>]',
     description: 'Apply a noise reduction filter to a layer.',
     flags: [
       { flag: '--strength',    req: false, desc: 'Reduction strength 1-10 (default: 3)' },
@@ -376,13 +376,13 @@ const filterCommands: Command[] = [
 const layerCommands: Command[] = [
   {
     name: 'layer-list',
-    synopsis: 'harness-gimp layer-list <image>',
+    synopsis: 'harnessgg-gimp layer-list <image>',
     description: 'List all layers in the image with their index, name, opacity, and blend mode.',
     flags: [],
   },
   {
     name: 'layer-add',
-    synopsis: 'harness-gimp layer-add <image> --name <s> [--position <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-add <image> --name <s> [--position <int>] [--output <path>]',
     description: 'Add a new empty layer to the image.',
     flags: [
       { flag: '--name',     req: true,  desc: 'Name for the new layer' },
@@ -392,7 +392,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-remove',
-    synopsis: 'harness-gimp layer-remove <image> --layer-index <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-remove <image> --layer-index <int> [--output <path>]',
     description: 'Remove the layer at the given index.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the layer to remove' },
@@ -401,7 +401,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-rename',
-    synopsis: 'harness-gimp layer-rename <image> --layer-index <int> --name <s> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-rename <image> --layer-index <int> --name <s> [--output <path>]',
     description: 'Rename a layer.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
@@ -411,7 +411,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-opacity',
-    synopsis: 'harness-gimp layer-opacity <image> --layer-index <int> --opacity <0-100> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-opacity <image> --layer-index <int> --opacity <0-100> [--output <path>]',
     description: 'Set the opacity of a layer to a value between 0 (transparent) and 100 (fully opaque).',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
@@ -421,7 +421,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-blend-mode',
-    synopsis: 'harness-gimp layer-blend-mode <image> --layer-index <int> --mode <s> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-blend-mode <image> --layer-index <int> --mode <s> [--output <path>]',
     description: 'Set the blend mode of a layer. Common modes: NORMAL, MULTIPLY, SCREEN, OVERLAY.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the target layer' },
@@ -431,7 +431,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-duplicate',
-    synopsis: 'harness-gimp layer-duplicate <image> --layer-index <int> [--position <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-duplicate <image> --layer-index <int> [--position <int>] [--output <path>]',
     description: 'Duplicate a layer and insert the copy at the specified position.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the layer to duplicate' },
@@ -441,7 +441,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-merge-down',
-    synopsis: 'harness-gimp layer-merge-down <image> --layer-index <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-merge-down <image> --layer-index <int> [--output <path>]',
     description: 'Merge the layer at the given index down onto the layer below it.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the layer to merge down' },
@@ -450,7 +450,7 @@ const layerCommands: Command[] = [
   },
   {
     name: 'layer-reorder',
-    synopsis: 'harness-gimp layer-reorder <image> --layer-index <int> --index <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp layer-reorder <image> --layer-index <int> --index <int> [--output <path>]',
     description: 'Move a layer to a new position in the layer stack.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Current index of the layer to move' },
@@ -463,7 +463,7 @@ const layerCommands: Command[] = [
 const selectionCommands: Command[] = [
   {
     name: 'select-all',
-    synopsis: 'harness-gimp select-all <image> [--output <path>]',
+    synopsis: 'harnessgg-gimp select-all <image> [--output <path>]',
     description: 'Select the entire canvas.',
     flags: [
       { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
@@ -471,7 +471,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'select-none',
-    synopsis: 'harness-gimp select-none <image> [--output <path>]',
+    synopsis: 'harnessgg-gimp select-none <image> [--output <path>]',
     description: 'Deselect the current selection.',
     flags: [
       { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
@@ -479,7 +479,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'invert-selection',
-    synopsis: 'harness-gimp invert-selection <image> [--output <path>]',
+    synopsis: 'harnessgg-gimp invert-selection <image> [--output <path>]',
     description: 'Invert the current selection so that the unselected area becomes selected.',
     flags: [
       { flag: '--output', req: false, desc: 'Output file path (default: overwrite input)' },
@@ -487,7 +487,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'feather-selection',
-    synopsis: 'harness-gimp feather-selection <image> --radius <f> [--output <path>]',
+    synopsis: 'harnessgg-gimp feather-selection <image> --radius <f> [--output <path>]',
     description: 'Feather the edges of the current selection by the given radius.',
     flags: [
       { flag: '--radius', req: true,  desc: 'Feather radius in pixels' },
@@ -496,7 +496,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'select-rectangle',
-    synopsis: 'harness-gimp select-rectangle <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp select-rectangle <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
     description: 'Create a rectangular selection.',
     flags: [
       { flag: '--x',      req: true,  desc: 'Left edge of the selection' },
@@ -508,7 +508,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'select-ellipse',
-    synopsis: 'harness-gimp select-ellipse <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp select-ellipse <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
     description: 'Create an elliptical selection bounded by the given rectangle.',
     flags: [
       { flag: '--x',      req: true,  desc: 'Left edge of the bounding rectangle' },
@@ -520,7 +520,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'add-layer-mask',
-    synopsis: 'harness-gimp add-layer-mask <image> --layer-index <int> [--mode WHITE] [--output <path>]',
+    synopsis: 'harnessgg-gimp add-layer-mask <image> --layer-index <int> [--mode WHITE] [--output <path>]',
     description: 'Add a layer mask to the specified layer. The default mode WHITE creates a fully visible mask.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the layer to mask' },
@@ -530,7 +530,7 @@ const selectionCommands: Command[] = [
   },
   {
     name: 'apply-layer-mask',
-    synopsis: 'harness-gimp apply-layer-mask <image> --layer-index <int> [--output <path>]',
+    synopsis: 'harnessgg-gimp apply-layer-mask <image> --layer-index <int> [--output <path>]',
     description: 'Apply and remove the layer mask, merging it permanently into the layer.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the layer whose mask to apply' },
@@ -542,7 +542,7 @@ const selectionCommands: Command[] = [
 const textCommands: Command[] = [
   {
     name: 'add-text',
-    synopsis: 'harness-gimp add-text <image> --text <s> --x <int> --y <int> [--font Sans] [--size 36.0] [--color #ffffff] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp add-text <image> --text <s> --x <int> --y <int> [--font Sans] [--size 36.0] [--color #ffffff] [--layer-index <int>] [--output <path>]',
     description: 'Add a text layer to the image at the given coordinates.',
     flags: [
       { flag: '--text',        req: true,  desc: 'Text content to render' },
@@ -557,7 +557,7 @@ const textCommands: Command[] = [
   },
   {
     name: 'update-text',
-    synopsis: 'harness-gimp update-text <image> --layer-index <int> --text <s> [--output <path>]',
+    synopsis: 'harnessgg-gimp update-text <image> --layer-index <int> --text <s> [--output <path>]',
     description: 'Update the text content of an existing text layer.',
     flags: [
       { flag: '--layer-index', req: true,  desc: 'Index of the text layer to update' },
@@ -567,7 +567,7 @@ const textCommands: Command[] = [
   },
   {
     name: 'stroke-selection',
-    synopsis: 'harness-gimp stroke-selection <image> --width <f> [--color #ffffff] [--layer-index <int>] [--output <path>]',
+    synopsis: 'harnessgg-gimp stroke-selection <image> --width <f> [--color #ffffff] [--layer-index <int>] [--output <path>]',
     description: 'Stroke the current selection boundary with the given width and colour.',
     flags: [
       { flag: '--width',       req: true,  desc: 'Stroke width in pixels' },
@@ -638,7 +638,7 @@ const errorCodes = [
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="term-title">terminal</span>
       </div>
-      <pre class="term-body" set:html={`${c('t-prompt','$')} harness-gimp bridge start`}></pre>
+      <pre class="term-body" set:html={`${c('t-prompt','$')} harnessgg-gimp bridge start`}></pre>
     </div>
     <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> (exit 5) with backoff 0.5s, 1s, 2s.</p>
   </section>

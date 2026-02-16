@@ -53,7 +53,7 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
   {
     key: 'kdenlive',
     name: 'harnessgg-kdenlive',
-    binary: 'harness-kdenlive',
+    binary: 'harnessgg-kdenlive',
     route: '/kdenlive',
     ecosystem: 'pypi',
     registryName: 'harnessgg-kdenlive',
@@ -64,11 +64,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     purpose: 'Automate Kdenlive video editing timelines, effects, and renders',
     requirements: {
       runtime: 'Python >= 3.10',
-      targetApp: 'Kdenlive with bridge running via harness-kdenlive bridge start',
+      targetApp: 'Kdenlive with bridge running via harnessgg-kdenlive bridge start',
     },
     links: {
       docs: 'https://harness.gg/kdenlive',
-      github: 'https://github.com/harnessgg/harness-kdenlive',
+      github: 'https://github.com/harnessgg/Harness-kdenlive',
       registry: 'https://pypi.org/project/harnessgg-kdenlive/',
     },
     llmsCommands: 'bridge start|stop|status|verify, create-project, import-asset, timeline edits, effects, render-project, render-status',
@@ -77,7 +77,7 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
   {
     key: 'blender',
     name: 'harnessgg-blender',
-    binary: 'harness-blender',
+    binary: 'harnessgg-blender',
     route: '/blender',
     ecosystem: 'pypi',
     registryName: 'harnessgg-blender',
@@ -88,11 +88,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     purpose: 'Script Blender scenes, objects, materials, and renders from the CLI',
     requirements: {
       runtime: 'Python >= 3.10',
-      targetApp: 'Blender with bridge running via harness-blender bridge start',
+      targetApp: 'Blender with bridge running via harnessgg-blender bridge start',
     },
     links: {
       docs: 'https://harness.gg/blender',
-      github: 'https://github.com/harnessgg/harness-blender',
+      github: 'https://github.com/harnessgg/Harness-blender',
       registry: 'https://pypi.org/project/harnessgg-blender/',
     },
     llmsCommands: 'bridge start|stop|status|verify, file/object/camera/light/material/modifier commands, render still/animation/status',
@@ -101,7 +101,7 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
   {
     key: 'gimp',
     name: 'harnessgg-gimp',
-    binary: 'harness-gimp',
+    binary: 'harnessgg-gimp',
     route: '/gimp',
     ecosystem: 'pypi',
     registryName: 'harnessgg-gimp',
@@ -112,11 +112,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     purpose: 'Automate GIMP image editing with filters, adjustments, layers, and export',
     requirements: {
       runtime: 'Python >= 3.10',
-      targetApp: 'GIMP with bridge running via harness-gimp bridge start',
+      targetApp: 'GIMP with bridge running via harnessgg-gimp bridge start',
     },
     links: {
       docs: 'https://harness.gg/gimp',
-      github: 'https://github.com/harnessgg/harness-gimp',
+      github: 'https://github.com/harnessgg/Harness-gimp',
       registry: 'https://pypi.org/project/harnessgg-gimp/',
     },
     llmsCommands: 'bridge start|stop|status|verify, file/transform/color/filter/layer/selection/text commands',
