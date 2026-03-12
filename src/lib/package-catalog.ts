@@ -68,11 +68,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     },
     links: {
       docs: 'https://harness.gg/kdenlive',
-      github: 'https://github.com/harnessgg/Harness-kdenlive',
+      github: 'https://github.com/harnessgg/harness-kdenlive',
       registry: 'https://pypi.org/project/harnessgg-kdenlive/',
     },
-    llmsCommands: 'bridge start|stop|status|verify, create-project, import-asset, timeline edits, effects, render-project, render-status',
-    fallbackVersion: '0.4.0',
+    llmsCommands: 'bridge start|status|verify, actions, capabilities, create-project, import-asset, add-text, add-clip, render-project, render-status, export-otio',
+    fallbackVersion: '0.6.0',
   },
   {
     key: 'blender',
@@ -92,11 +92,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     },
     links: {
       docs: 'https://harness.gg/blender',
-      github: 'https://github.com/harnessgg/Harness-blender',
+      github: 'https://github.com/harnessgg/harness-blender',
       registry: 'https://pypi.org/project/harnessgg-blender/',
     },
-    llmsCommands: 'bridge start|stop|status|verify, file/object/camera/light/material/modifier commands, render still/animation/status',
-    fallbackVersion: '0.2.0',
+    llmsCommands: 'bridge start|status|verify, file new|inspect, object add, material create|assign, camera add|set-active, render still|animation|status',
+    fallbackVersion: '0.3.0',
   },
   {
     key: 'gimp',
@@ -116,11 +116,11 @@ export const PACKAGE_CATALOG: PackageMeta[] = [
     },
     links: {
       docs: 'https://harness.gg/gimp',
-      github: 'https://github.com/harnessgg/Harness-gimp',
+      github: 'https://github.com/harnessgg/harness-gimp',
       registry: 'https://pypi.org/project/harnessgg-gimp/',
     },
-    llmsCommands: 'bridge start|stop|status|verify, file/transform/color/filter/layer/selection/text commands',
-    fallbackVersion: '0.2.1',
+    llmsCommands: 'bridge start|status|verify, inspect, resize, crop, montage-grid, brightness-contrast, levels, layer-add, export, run-macro',
+    fallbackVersion: '0.3.0',
   },
   {
     key: 'browser',

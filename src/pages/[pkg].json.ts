@@ -50,11 +50,12 @@ const AGENT_DOCS: Record<string, AgentDoc> = {
     cliGuidance:
       'Agents: use CLI commands for interactive exploration and when building something new. Use the Python API for batch operations on known-good workflows.',
     quickFlow: [
-      'Start the bridge via `harnessgg-kdenlive bridge start` (with `bridge status`/`bridge verify` before edits).',
+      'Start the bridge via `harnessgg-kdenlive bridge start` and verify with `bridge status` or `bridge verify`.',
       'Create a project: `create-project edit.kdenlive --title "Agent Edit" --overwrite`.',
       'Import media using `import-asset` and capture `producerId`s for timeline edits.',
-      'Build the timeline with `add-text`, `stitch-clips`, `add-track`, and other editing commands.',
-      'Validate before rendering, then `render-project edit.kdenlive output.mp4` and poll `render-status JOB_ID`.',
+      'Build the timeline with `add-text`, `add-clip`, `stitch-clips`, and track commands.',
+      'For background replacement, run `segment-person` first, inspect previews, optionally patch bad ranges with `set-mask-keyframes`, then call `replace-background` with the returned `matteAssetRef`.',
+      'Validate before rendering, then `render-project edit.kdenlive output.mp4` and poll `render-status JOB_ID` or `render-wait`.',
     ],
     response: 'Every command prints a JSON object. Always inspect `ok`; successful payloads appear under `data` and failures under `error` with a `code` hint.',
     errors: [
@@ -81,9 +82,9 @@ const AGENT_DOCS: Record<string, AgentDoc> = {
     cliGuidance:
       'Agents: use CLI commands for interactive exploration and when building something new. Use the Python API for batch operations on known-good workflows.',
     quickFlow: [
-      'Start `harnessgg-blender bridge start` (port 41749) and verify health with `bridge status/verify`.',
+      'Start `harnessgg-blender bridge start` and verify health with `bridge status` or `bridge verify`.',
       'Use `file new scene.blend --overwrite` followed by `file inspect` to establish a scene context.',
-      'Add geometry/materials with `object add` + `material create/assign`, then light/camera with `camera add` + `light add`.',
+      'Add geometry/materials with `object add` plus `material create` and `material assign`, then set up light and camera.',
       'Render a still frame `render still scene.blend out.png` or animation and watch `render status JOB_ID`.',
     ],
     response: 'Commands emit one JSON response. Inspect `ok`, then use `data` for success fields or `error` for advice.',
@@ -103,10 +104,10 @@ const AGENT_DOCS: Record<string, AgentDoc> = {
     cliGuidance:
       'Agents: use CLI commands for interactive exploration and when building something new. Use the Python API for batch operations on known-good workflows.',
     quickFlow: [
-      'Bring up the bridge with `harnessgg-gimp bridge start` (check `bridge status`/`bridge verify`).',
-      'Open or clone the image you want to edit (`create-project` equivalent) and inspect it.',
-      'Resize/crop adjustments with `resize`, `crop`, or `canvas-size`, then correct colours with `brightness-contrast`, `levels`, etc.',
-      'Apply filters (blur, sharpen, gaussian-blur) and export the final image with `export <image> <output>`. ',
+      'Bring up the bridge with `harnessgg-gimp bridge start`, then check `bridge status` or `bridge verify`.',
+      'Open or clone the image you want to edit and inspect it.',
+      'Resize or crop with `resize`, `crop`, `crop-center`, or `canvas-size`, then correct colors with `brightness-contrast` or `levels`.',
+      'Apply filters and export the final image with `export <image> <output>`.',
     ],
     response: 'Every command emits JSON; look at `ok` first. Use `data` for success info and `error.code` for failure reasoning.',
     errors: [

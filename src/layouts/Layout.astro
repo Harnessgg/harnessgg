@@ -4,14 +4,21 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  socialImage?: string;
+  socialImageAlt?: string;
 }
 
 const {
   title = 'Harness.gg: CLI Tools for AI Agents',
   description = 'Open-source CLI packages that give AI agents the ability to interact with any app. No MCPs, no servers. Just install and run.',
+  socialImage = '/logo-512.png',
+  socialImageAlt = 'Harness.gg logo',
 } = Astro.props;
 
 const currentPath = Astro.url.pathname;
+const siteUrl = 'https://harness.gg';
+const canonicalUrl = `${siteUrl}${currentPath}`;
+const socialImageUrl = socialImage.startsWith('http') ? socialImage : `${siteUrl}${socialImage}`;
 ---
 
 <!doctype html>
@@ -22,14 +29,27 @@ const currentPath = Astro.url.pathname;
     <meta name="description" content={description} />
     <meta name="ai-tools" content="harness.gg" />
     <meta name="robots" content="index, follow, max-snippet:-1" />
-    <link rel="canonical" href={`https://harness.gg${currentPath}`} />
+    <meta name="theme-color" content="#5a7a8a" />
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="alternate" type="application/json" href="/packages.json" title="Harness package registry" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM discovery index" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={`https://harness.gg${currentPath}`} />
+    <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content="Harness.gg" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:secure_url" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content={socialImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
@@ -50,6 +70,7 @@ const currentPath = Astro.url.pathname;
         </a>
         <div class="flex items-center gap-6">
           <a href="/#packages" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">Packages</a>
+          <a href="/studio" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">Studio</a>
           <a href="/llms.txt" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">llms.txt</a>
           <a href="https://github.com/harnessgg" target="_blank" rel="noopener" class="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">GitHub</a>
         </div>
@@ -73,6 +94,7 @@ const currentPath = Astro.url.pathname;
           <p class="text-[0.82rem] text-muted-foreground">CLI tools for AI agents. Open source, MIT licensed.</p>
         </div>
         <div class="flex gap-6">
+          <a href="/studio" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">Studio</a>
           <a href="https://github.com/harnessgg" target="_blank" rel="noopener" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">GitHub</a>
           <a href="https://www.npmjs.com/org/harnessgg" target="_blank" rel="noopener" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">npm</a>
           <a href="/llms.txt" class="text-[0.82rem] text-muted-foreground font-medium hover:text-foreground transition-colors no-underline hover:no-underline">llms.txt</a>

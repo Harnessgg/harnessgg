@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { CopyButton } from '@/components/CopyButton';
 import { getPypiVersion } from '@/lib/versions';
 
-const version = await getPypiVersion('harnessgg-gimp', '0.2.1');
+const version = await getPypiVersion('harnessgg-gimp', '0.3.0');
 const install = 'pip install harnessgg-gimp';
 
 const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
@@ -41,6 +41,93 @@ const quickFlowHtml = [
 
 const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"resize","data":{"output":"resized.png"}}');
 const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"open","error":{"code":"NOT_FOUND","message":"File not found","retryable":false}}');
+
+
+const fullCommandListHtml = [
+  '# Bridge',
+  '$ harnessgg-gimp bridge serve [--host <ip>] [--port <int>]',
+  '$ harnessgg-gimp bridge start [--host <ip>] [--port <int>]',
+  '$ harnessgg-gimp bridge stop',
+  '$ harnessgg-gimp bridge status',
+  '$ harnessgg-gimp bridge verify [--iterations <int>] [--max-failures <int>]',
+  '$ harnessgg-gimp bridge soak [--iterations <int>] [--action <method>] [--action-params-json <json>]',
+  '',
+  '# System',
+  '$ harnessgg-gimp actions',
+  '$ harnessgg-gimp capabilities',
+  '$ harnessgg-gimp doctor [--verbose]',
+  '$ harnessgg-gimp version',
+  '$ harnessgg-gimp plan-edit <image> <action> [--params-json <json>]',
+  '',
+  '# Project and safety',
+  '$ harnessgg-gimp open <image>',
+  '$ harnessgg-gimp save <image> <output>',
+  '$ harnessgg-gimp export <image> <output>',
+  '$ harnessgg-gimp montage-grid --images-json <json-list> --rows <int> --cols <int> --tile-width <int> --tile-height <int> --output <path> [--gutter <int>] [--background <hex>] [--fit-mode cover|contain]',
+  '$ harnessgg-gimp clone-project <source> <target> [--overwrite]',
+  '$ harnessgg-gimp inspect <image>',
+  '$ harnessgg-gimp validate <image>',
+  '$ harnessgg-gimp diff <source> <target>',
+  '$ harnessgg-gimp snapshot <image> <description>',
+  '$ harnessgg-gimp undo <image>',
+  '$ harnessgg-gimp redo <image>',
+  '',
+  '# Transform',
+  '$ harnessgg-gimp resize <image> --width <int> --height <int> [--output <path>]',
+  '$ harnessgg-gimp crop <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+  '$ harnessgg-gimp crop-center <image> --width <int> --height <int> [--output <path>]',
+  '$ harnessgg-gimp rotate <image> --degrees <90|180|270> [--output <path>]',
+  '$ harnessgg-gimp flip <image> --axis horizontal|vertical [--output <path>]',
+  '$ harnessgg-gimp canvas-size <image> --width <int> --height <int> [--offset-x <int>] [--offset-y <int>] [--output <path>]',
+  '',
+  '# Tone and color',
+  '$ harnessgg-gimp brightness-contrast <image> [--brightness <float>] [--contrast <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp levels <image> [--black <float>] [--white <float>] [--gamma <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp curves <image> [--channel <value|red|green|blue|alpha>] --points-json <json> [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp hue-saturation <image> [--hue <float>] [--saturation <float>] [--lightness <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp color-balance <image> [--cyan-red <float>] [--magenta-green <float>] [--yellow-blue <float>] [--transfer-mode <str>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp color-temperature <image> --temperature <float> [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp invert <image> [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp desaturate <image> [--mode <luma|average|lightness>] [--layer-index <int>] [--output <path>]',
+  '',
+  '# Filters',
+  '$ harnessgg-gimp blur <image> [--radius <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp gaussian-blur <image> [--radius-x <float>] [--radius-y <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp sharpen <image> [--radius <float>] [--amount <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp unsharp-mask <image> [--radius <float>] [--amount <float>] [--threshold <float>] [--layer-index <int>] [--output <path>]',
+  '$ harnessgg-gimp noise-reduction <image> [--strength <int>] [--layer-index <int>] [--output <path>]',
+  '',
+  '# Layers',
+  '$ harnessgg-gimp layer-list <image>',
+  '$ harnessgg-gimp layer-add <image> --name <str> [--position <int>] [--output <path>]',
+  '$ harnessgg-gimp layer-remove <image> --layer-index <int> [--output <path>]',
+  '$ harnessgg-gimp layer-rename <image> --layer-index <int> --name <str> [--output <path>]',
+  '$ harnessgg-gimp layer-opacity <image> --layer-index <int> --opacity <0-100> [--output <path>]',
+  '$ harnessgg-gimp layer-blend-mode <image> --layer-index <int> --mode <name> [--output <path>]',
+  '$ harnessgg-gimp layer-duplicate <image> --layer-index <int> [--position <int>] [--output <path>]',
+  '$ harnessgg-gimp layer-merge-down <image> --layer-index <int> [--output <path>]',
+  '$ harnessgg-gimp layer-reorder <image> --layer-index <int> --index <int> [--output <path>]',
+  '',
+  '# Selection and masks',
+  '$ harnessgg-gimp select-all <image> [--output <path>]',
+  '$ harnessgg-gimp select-none <image> [--output <path>]',
+  '$ harnessgg-gimp invert-selection <image> [--output <path>]',
+  '$ harnessgg-gimp feather-selection <image> --radius <float> [--output <path>]',
+  '$ harnessgg-gimp select-rectangle <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+  '$ harnessgg-gimp select-ellipse <image> --x <int> --y <int> --width <int> --height <int> [--output <path>]',
+  '$ harnessgg-gimp add-layer-mask <image> --layer-index <int> [--layer-id <int>] [--mode <str>] [--output <path>]',
+  '$ harnessgg-gimp apply-layer-mask <image> --layer-index <int> [--layer-id <int>] [--output <path>]',
+  '',
+  '# Text and annotation',
+  '$ harnessgg-gimp add-text <image> --text <str> --x <int> --y <int> [--font <str>] [--size <float>] [--color <hex>] [--output <path>]',
+  '$ harnessgg-gimp update-text <image> --layer-index <int> [--layer-id <int>] --text <str> [--output <path>]',
+  '$ harnessgg-gimp stroke-selection <image> --width <float> [--color <hex>] [--layer-index <int>] [--output <path>]',
+  '',
+  '# Macros and presets',
+  '$ harnessgg-gimp run-macro <image> --macro <path-or-json-list> [--params-json <json>]',
+  '$ harnessgg-gimp list-presets',
+  '$ harnessgg-gimp apply-preset <image> <preset-name>',
+].join('\n');
 
 type Flag = { flag: string; req: boolean; desc: string };
 type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
@@ -589,7 +676,7 @@ const errorCodes = [
 
 <Layout
   title="harnessgg-gimp | Harness.gg"
-  description="CLI harness for AI agents to edit images with GIMP. Resize, colour-adjust, apply filters, manage layers, and export — structured JSON output via a local bridge."
+  description="CLI harness for AI agents to edit images with GIMP. Resize, colour-adjust, apply filters, manage layers, and export, structured JSON output via a local bridge."
 >
 
   <!-- Header -->
@@ -608,7 +695,7 @@ const errorCodes = [
 
     <p class="tagline">
       CLI harness for AI agents to automate GIMP image editing.
-      Resize, crop, adjust colours, apply filters, manage layers, and export — all with structured JSON output via a local bridge.
+      Resize, crop, adjust colours, apply filters, manage layers, and export, all with structured JSON output via a local bridge.
     </p>
 
     <div class="install-row">
@@ -620,7 +707,7 @@ const errorCodes = [
       <a href="https://pypi.org/project/harnessgg-gimp/" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
       </a>
-      <a href="https://github.com/harnessgg/Harness-gimp" target="_blank" rel="noopener">
+      <a href="https://github.com/harnessgg/harness-gimp" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
       </a>
     </div>
@@ -976,10 +1063,20 @@ const errorCodes = [
       ))}
     </div>
   </section>
-
   <Separator />
-
-  <!-- Response shape -->
+  <!-- Full command list -->
+  <section class="wrap sec">
+    <h2>Full command list</h2>
+    <p class="sec-intro">Complete CLI surface from the package docs. Use this list for long-form planning or tool coverage audits.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">commands</span>
+      </div>
+      <pre class="term-body" set:html={fullCommandListHtml}></pre>
+    </div>
+  </section>
+<!-- Response shape -->
   <section class="wrap sec">
     <h2>Response shape</h2>
     <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
@@ -1037,7 +1134,7 @@ const errorCodes = [
     <h2>Submit feedback</h2>
     <p class="sec-intro">
       Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
-      Issues land on <a href="https://github.com/harnessgg/Harness-gimp" target="_blank" rel="noopener">harnessgg/Harness-gimp</a>.
+      Issues land on <a href="https://github.com/harnessgg/harness-gimp" target="_blank" rel="noopener">harnessgg/harness-gimp</a>.
     </p>
 
     <table class="flag-table" style="margin-bottom: 1.5rem">
@@ -1170,3 +1267,9 @@ const errorCodes = [
     h1 { font-size: 1.2rem; }
   }
 </style>
+
+
+
+
+
+

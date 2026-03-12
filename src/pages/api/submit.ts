@@ -4,10 +4,10 @@ import type { APIRoute } from 'astro';
 
 const REPO_MAP: Record<string, string> = {
   electron: 'harnessgg/Harness-electron',
-  kdenlive: 'harnessgg/Harness-kdenlive',
+  kdenlive: 'harnessgg/harness-kdenlive',
   browser:  'harnessgg/harness-browser',
-  blender:  'harnessgg/Harness-blender',
-  gimp:     'harnessgg/Harness-gimp',
+  blender:  'harnessgg/harness-blender',
+  gimp:     'harnessgg/harness-gimp',
 };
 
 interface SubmitBody {

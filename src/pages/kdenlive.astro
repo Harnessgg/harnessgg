@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { CopyButton } from '@/components/CopyButton';
 import { getPypiVersion } from '@/lib/versions';
 
-const version = await getPypiVersion('harnessgg-kdenlive', '0.4.0');
+const version = await getPypiVersion('harnessgg-kdenlive', '0.6.0');
 const install = 'pip install harnessgg-kdenlive';
 
 const c = (cls: string, text: string) => `<span class="${cls}">${text}</span>`;
@@ -31,7 +31,11 @@ const quickFlowHtml = [
   termCmd('harnessgg-kdenlive add-text edit.kdenlive "Opening Title" --duration-frames 75 --track-id playlist0 --position 0'),
   termCmd('harnessgg-kdenlive stitch-clips edit.kdenlive playlist0 clip1 clip1 --position 75 --gap 10'),
   nl,
-  comment('# 5. Validate then render'),
+  comment('# 5. Generate a reusable matte, then replace the background'),
+  termCmd('harnessgg-kdenlive segment-person edit.kdenlive clip1 --zone-in 0 --zone-out 50 --quality balanced'),
+  termCmd('harnessgg-kdenlive replace-background edit.kdenlive clip1 --background-media plate.mp4 --matte-asset-ref matte_person_abc123 --track-id playlist_bg'),
+  nl,
+  comment('# 6. Validate then render'),
   termCmd('harnessgg-kdenlive validate edit.kdenlive'),
   termCmd('harnessgg-kdenlive render-project edit.kdenlive output.mp4'),
   json('{"ok":true,"protocolVersion":"1.0","command":"render-project","data":{"jobId":"job_abc"}}'),
@@ -40,6 +44,112 @@ const quickFlowHtml = [
 
 const schemaSuccessHtml = json('{"ok":true,"protocolVersion":"1.0","command":"import-asset","data":{"producerId":"clip1"}}');
 const schemaErrorHtml = json('{"ok":false,"protocolVersion":"1.0","command":"render-project","error":{"code":"BRIDGE_UNAVAILABLE","message":"Bridge is not reachable","retryable":true}}');
+
+
+const fullCommandListHtml = [
+  '# Bridge lifecycle',
+  '$ harnessgg-kdenlive bridge start [--host 127.0.0.1] [--port 41739]',
+  '$ harnessgg-kdenlive bridge serve [--host 127.0.0.1] [--port 41739]',
+  '$ harnessgg-kdenlive bridge status',
+  '$ harnessgg-kdenlive bridge stop',
+  '',
+  '# Bridge verification',
+  '$ harnessgg-kdenlive bridge verify [--iterations 25] [--max-failures 0]',
+  '$ harnessgg-kdenlive bridge soak [--iterations 100] [--duration-seconds 5] [--action system.health]',
+  '',
+  '# Core commands',
+  '$ harnessgg-kdenlive actions',
+  '$ harnessgg-kdenlive capabilities',
+  '$ harnessgg-kdenlive doctor [--report-on-failure/--no-report-on-failure] [--include-render/--no-include-render] [--report-url <url>]',
+  '$ harnessgg-kdenlive plan-edit <project.kdenlive> <action> [--params-json <json>]',
+  '$ harnessgg-kdenlive undo <project.kdenlive> [--snapshot-id <id>]',
+  '$ harnessgg-kdenlive redo <project.kdenlive>',
+  '$ harnessgg-kdenlive autosave <project.kdenlive> [--interval-seconds 60] [--enabled/--no-enabled]',
+  '$ harnessgg-kdenlive pack-project <project.kdenlive> <output-dir> [--media-dir-name media]',
+  '$ harnessgg-kdenlive recalc-bounds <project.kdenlive> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive create-project <output.kdenlive> [--title <name>] [--width 1920] [--height 1080] [--fps 30] [--overwrite]',
+  '$ harnessgg-kdenlive clone-project <source.kdenlive> <target.kdenlive> [--overwrite]',
+  '$ harnessgg-kdenlive inspect <project.kdenlive>',
+  '$ harnessgg-kdenlive validate <project.kdenlive> [--check-files/--no-check-files]',
+  '$ harnessgg-kdenlive diff <source.kdenlive> <target.kdenlive>',
+  '$ harnessgg-kdenlive import-asset <project.kdenlive> <media-path> [--producer-id <id>] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive add-text <project.kdenlive> <text> [--duration-frames 90] [--track-id <id>] [--position 0] [--font "DejaVu Sans"] [--size 64] [--color "#ffffff"] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive update-text <project.kdenlive> <producer_id> [--text <text>] [--font <font>] [--size <n>] [--color <hex>] [--duration-frames <n>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive asset-metadata <project.kdenlive> <producer_id>',
+  '$ harnessgg-kdenlive replace-asset <project.kdenlive> <producer_id> <media-path> [--update-name/--no-update-name] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive list-bin <project.kdenlive>',
+  '$ harnessgg-kdenlive create-bin-folder <project.kdenlive> <name> [--parent-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive move-asset-to-folder <project.kdenlive> <producer_id> <folder_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive segment-person <project.kdenlive> <clip_ref> [--zone-in <n>] [--zone-out <n>] [--model <id>] [--quality fast|balanced|quality] [--feather-px <float>] [--shrink-grow-px <int>] [--despill <float>] [--temporal-radius <int>] [--preview-only] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive set-mask-keyframes <project.kdenlive> <clip_ref> <keyframes-json> [--mask-id <id>] [--feather <float>] [--invert] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive set-effect-keyframes <project> <clip_ref> <effect_id> <parameter> <keyframes-json> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive add-clip <project> <clip_id> <track_id> <position> [--in-point 0] [--out-point 49] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive move-clip <project> <clip_ref> <track_id> <position> [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive trim-clip <project> <clip_ref> [--in-point 0] [--out-point 49] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive remove-clip <project> <clip_ref> [--close-gap] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive split-clip <project> <clip_ref> <position> [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive ripple-delete <project> <clip_ref> [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive insert-gap <project> <track_id> <position> <length> [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive remove-all-gaps <project> <track_id> [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive stitch-clips <project> <track_id> <clip_id...> [--position <frame>] [--gap 0] [--duration-frames <n>] [--output out.kdenlive] [--dry-run]',
+  '$ harnessgg-kdenlive list-clips <project> [--track-id <id>] [--producer-id <id>]',
+  '$ harnessgg-kdenlive resolve-clip <project> <selector> [--track-id <id>] [--at-frame <n>]',
+  '$ harnessgg-kdenlive select-zone <project> [--zone-in 0] [--zone-out 0] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive detect-gaps <project> [--track-id <id>]',
+  '$ harnessgg-kdenlive time-remap <project> <clip_ref> <speed> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive transform-clip <project> <clip_ref> [--geometry <str>] [--rotate <float>] [--scale <float>] [--opacity <float>] [--keyframes-json <json>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive nudge-clip <project> <clip_ref> <delta_frames> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive slip-clip <project> <clip_ref> <delta_frames> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive slide-clip <project> <clip_ref> <delta_frames> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive ripple-insert <project> <track_id> <position> [--length <n>] [--clip-id <id>] [--in-point <n>] [--out-point <n>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive group-clips <project> <clip_ref...> [--group-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive ungroup-clips <project> <clip_ref...> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive list-sequences <project>',
+  '$ harnessgg-kdenlive copy-sequence <project> <source_id> [--new-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive set-active-sequence <project> <sequence_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive list-effects <project> <clip_ref>',
+  '$ harnessgg-kdenlive apply-effect <project> <clip_ref> <service> [--effect-id <id>] [--properties-json <json>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive update-effect <project> <clip_ref> <effect_id> <properties-json> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive remove-effect <project> <clip_ref> <effect_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive list-transitions <project>',
+  '$ harnessgg-kdenlive apply-transition <project> [--in-frame 0] [--out-frame 0] [--service mix] [--transition-id <id>] [--properties-json <json>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive remove-transition <project> <transition_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive apply-wipe <project> [--in-frame 0] [--out-frame 0] [--preset circle|clock|barn|iris|linear] [--transition-id <id>] [--softness <float>] [--invert] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive replace-background <project.kdenlive> <clip_ref> [--background-media <path> | --background-producer-id <id>] [--producer-id <id>] [--matte-mask-id <id>] [--matte-asset-ref <id>] [--track-id <id>] [--effect-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive add-music-bed <project> <media> [--track-id playlist1] [--position 0] [--duration-frames <n>] [--producer-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive duck-audio <project> <track_id> [--duck-gain 0.3] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive audio-fade <project> <clip_ref> [--fade-type in|out] [--frames 24] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive normalize-audio <project> <clip_ref> [--target-db -14] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive remove-silence <project> <clip_ref> [--threshold-db -35] [--min-duration-frames 6] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive audio-pan <project> <clip_ref> <pan> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive grade-clip <project> <clip_ref> [--lift <float>] [--gamma <float>] [--gain <float>] [--saturation <float>] [--temperature <float>] [--lut-path <path>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive add-track <project> [--track-type video|audio] [--name <name>] [--index <n>] [--track-id <id>] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive remove-track <project> <track_id> [--force] [--output out.kdenlive]',
+  '$ harnessgg-kdenlive reorder-track <project> <track_id> <index> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive resolve-track <project> <name-or-id>',
+  '$ harnessgg-kdenlive track-mute <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive track-unmute <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive track-lock <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive track-unlock <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive track-show <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive track-hide <project> <track_id> [--output out.kdenlive]',
+  '$ harnessgg-kdenlive snapshot <project> <description>',
+  '$ harnessgg-kdenlive render-clip <source.mp4> <output.mp4> <duration_seconds> [--start-seconds 0] [--preset-name h264|hevc|prores]',
+  '$ harnessgg-kdenlive render-project <project.kdenlive> <output.mp4> [--start-seconds <float>] [--duration-seconds <float>] [--zone-in <frame>] [--zone-out <frame>] [--preset-name h264|hevc|prores]',
+  '$ harnessgg-kdenlive render-status <job_id>',
+  '$ harnessgg-kdenlive render-latest [--type project|clip] [--status running|completed|failed|canceled]',
+  '$ harnessgg-kdenlive render-retry <job_id> [--output <path>]',
+  '$ harnessgg-kdenlive render-cancel <job_id>',
+  '$ harnessgg-kdenlive render-list-jobs',
+  '$ harnessgg-kdenlive render-wait <job_id> [--timeout-seconds 120] [--poll-interval-seconds 0.2]',
+  '$ harnessgg-kdenlive preview-frame <project.kdenlive> <output.png> [--frame <n>] [--seconds <float>]',
+  '$ harnessgg-kdenlive preview-contact-sheet <project.kdenlive> <output.svg> [--frames-json <json>] [--count 4] [--start-frame 0] [--end-frame <n>] [--columns 3]',
+  '$ harnessgg-kdenlive export-edl <project.kdenlive> <output.edl>',
+  '$ harnessgg-kdenlive export-xml <project.kdenlive> <output.xml>',
+  '$ harnessgg-kdenlive export-otio <project.kdenlive> <output.otio>',
+  '$ harnessgg-kdenlive batch <steps-json> [--stop-on-error/--no-stop-on-error]',
+  '$ harnessgg-kdenlive version',
+].join('\n');
 
 type Flag = { flag: string; req: boolean; desc: string };
 type Command = { name: string; synopsis: string; description: string; flags: Flag[] };
@@ -102,7 +212,7 @@ const projectCommands: Command[] = [
   {
     name: 'inspect',
     synopsis: 'harnessgg-kdenlive inspect <project>',
-    description: 'Return a structured summary of the project — tracks, clips, duration.',
+    description: 'Return a structured summary of the project, tracks, clips, duration.',
     flags: [],
   },
   {
@@ -208,6 +318,27 @@ const timelineCommands: Command[] = [
     ],
   },
   {
+    name: 'segment-person',
+    synopsis: 'harnessgg-kdenlive segment-person <project> <clip_ref> [--zone-in <n>] [--zone-out <n>] [--quality fast|balanced|quality] [--preview-only]',
+    description: 'Generate a reusable matte asset for a clip or zone. v1 is temporally smoothed but explicitly non-tracking.',
+    flags: [
+      { flag: '--zone-in / --zone-out', req: false, desc: 'Restrict processing to a clip-local frame range' },
+      { flag: '--quality / --model', req: false, desc: 'Segmentation preset or explicit model id' },
+      { flag: '--feather-px / --shrink-grow-px / --temporal-radius', req: false, desc: 'Edge cleanup and temporal smoothing controls' },
+      { flag: '--preview-only', req: false, desc: 'Process representative frames only for QC' },
+    ],
+  },
+  {
+    name: 'replace-background',
+    synopsis: 'harnessgg-kdenlive replace-background <project> <clip_ref> [--background-media <path>] [--matte-asset-ref <id>]',
+    description: 'Swap a clip background using a generated matte asset or a manual mask setup.',
+    flags: [
+      { flag: '--background-media / --background-producer-id', req: false, desc: 'Use a plate file or existing producer' },
+      { flag: '--matte-asset-ref / --matte-mask-id', req: false, desc: 'Generated matte asset or manual cleanup mask' },
+      { flag: '--track-id / --effect-id', req: false, desc: 'Control the background track and compositing filter id' },
+    ],
+  },
+  {
     name: 'apply-transition',
     synopsis: 'harnessgg-kdenlive apply-transition <project> [--in-frame <n>] [--out-frame <n>] [--service <s>]',
     description: 'Add a transition between two clips.',
@@ -239,7 +370,7 @@ const renderCommands: Command[] = [
   {
     name: 'render-project',
     synopsis: 'harnessgg-kdenlive render-project <project.kdenlive> <output.mp4> [--start-seconds <f>] [--duration-seconds <f>] [--preset-name h264|hevc|prores]',
-    description: 'Render the full project or a zone to a video file. Returns a job ID — poll render-status for progress.',
+    description: 'Render the full project or a zone to a video file. Returns a job ID, poll render-status for progress.',
     flags: [
       { flag: '--start-seconds / --duration-seconds', req: false, desc: 'Render a subrange' },
       { flag: '--zone-in / --zone-out',               req: false, desc: 'Render zone in frames' },
@@ -274,7 +405,7 @@ const errorCodes = [
 
 <Layout
   title="harnessgg-kdenlive | Harness.gg"
-  description="CLI harness for AI agents to edit Kdenlive projects. Create timelines, add clips, apply effects, and render — structured JSON output via a local bridge."
+  description="CLI harness for AI agents to edit Kdenlive projects. Create timelines, add clips, apply effects, and render, structured JSON output via a local bridge."
 >
 
   <!-- Header -->
@@ -293,7 +424,7 @@ const errorCodes = [
 
     <p class="tagline">
       CLI harness for AI agents to automate Kdenlive video editing.
-      Create projects, edit timelines, apply effects and colour grades, and render — all with structured JSON output via a local bridge.
+      Create projects, edit timelines, apply effects and colour grades, and render, all with structured JSON output via a local bridge.
     </p>
 
     <div class="install-row">
@@ -305,7 +436,7 @@ const errorCodes = [
       <a href="https://pypi.org/project/harnessgg-kdenlive/" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">PyPI &nearr;</Badge>
       </a>
-      <a href="https://github.com/harnessgg/Harness-kdenlive" target="_blank" rel="noopener">
+      <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">
         <Badge variant="outline" className="ext-badge">GitHub &nearr;</Badge>
       </a>
     </div>
@@ -325,7 +456,7 @@ const errorCodes = [
       </div>
       <pre class="term-body" set:html={`${c('t-prompt','$')} harnessgg-kdenlive bridge start`}></pre>
     </div>
-    <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code> — backoff 0.5s, 1s, 2s.</p>
+    <p class="note">Always call <code class="inline-code">bridge status</code> before editing commands. Retry only on <code class="inline-code">BRIDGE_UNAVAILABLE</code>, backoff 0.5s, 1s, 2s.</p>
   </section>
 
   <Separator />
@@ -500,10 +631,20 @@ const errorCodes = [
       ))}
     </div>
   </section>
-
   <Separator />
-
-  <!-- Response shape -->
+  <!-- Full command list -->
+  <section class="wrap sec">
+    <h2>Full command list</h2>
+    <p class="sec-intro">Complete CLI surface from the package docs. Use this list for long-form planning or tool coverage audits.</p>
+    <div class="term-block">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">commands</span>
+      </div>
+      <pre class="term-body" set:html={fullCommandListHtml}></pre>
+    </div>
+  </section>
+<!-- Response shape -->
   <section class="wrap sec">
     <h2>Response shape</h2>
     <p class="sec-intro">Every command emits exactly one JSON object to stdout. Check <code class="inline-code">ok</code> first.</p>
@@ -561,7 +702,7 @@ const errorCodes = [
     <h2>Submit feedback</h2>
     <p class="sec-intro">
       Agents can file bug reports and feature requests via <code class="inline-code">POST /api/submit</code>.
-      Issues land on <a href="https://github.com/harnessgg/Harness-kdenlive" target="_blank" rel="noopener">harnessgg/Harness-kdenlive</a>.
+      Issues land on <a href="https://github.com/harnessgg/harness-kdenlive" target="_blank" rel="noopener">harnessgg/harness-kdenlive</a>.
     </p>
 
     <table class="flag-table" style="margin-bottom: 1.5rem">
@@ -694,3 +835,9 @@ const errorCodes = [
     h1 { font-size: 1.2rem; }
   }
 </style>
+
+
+
+
+
+

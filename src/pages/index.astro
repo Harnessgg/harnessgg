@@ -26,6 +26,19 @@ const packages = await resolvePackageCatalog();
       <InstallCycler client:load />
       <span class="hero-meta">Open source &middot; MIT</span>
     </div>
+
+    <div class="studio-banner-row">
+      <a href="/studio" class="studio-banner">
+        <div class="studio-banner-copy">
+          <span class="studio-banner-kicker">New</span>
+          <strong>Harness Studio</strong>
+          <span>
+            A visual interface for AI-powered creative tasks. Describe a creative task, then watch an AI agent execute it in real desktop software.
+          </span>
+        </div>
+        <span class="studio-arrow">&rarr;</span>
+      </a>
+    </div>
   </section>
 
   <Separator />
@@ -120,4 +133,63 @@ const packages = await resolvePackageCatalog();
     font-size: 0.82rem;
     color: var(--muted-foreground);
   }
-</style>
+
+  .studio-banner-row {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 2rem;
+    margin-bottom: -2.5rem;
+  }
+
+  .studio-banner {
+    display: inline-flex;
+    max-width: 760px;
+    width: fit-content;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.15rem 1.25rem;
+    background: linear-gradient(135deg, var(--card), color-mix(in oklch, var(--background) 72%, var(--primary) 8%));
+    border: 1px solid color-mix(in oklch, var(--primary) 18%, var(--border));
+    border-radius: 18px;
+    text-decoration: none;
+  }
+
+  .studio-banner-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .studio-banner-kicker {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+  }
+
+  .studio-banner-copy strong {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.5rem;
+    line-height: 1.05;
+    color: var(--foreground);
+  }
+
+  .studio-banner-copy span:last-child {
+    max-width: 62ch;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--muted-foreground);
+  }
+
+  .studio-arrow {
+    color: var(--primary);
+    font-size: 1.1rem;
+    transition: transform 0.15s ease;
+  }
+
+  .studio-banner:hover .studio-arrow {
+    transform: translateX(4px);
+  }
+ </style>
